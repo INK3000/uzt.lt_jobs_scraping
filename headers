@@ -1,0 +1,15 @@
+Host: www.uzt.lt
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+X-Requested-With: XMLHttpRequest
+X-MicrosoftAjax: Delta=true
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded; charset=utf-8
+Origin: https://www.uzt.lt
+Alt-Used: www.uzt.lt
+Connection: keep-alive
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+TE: trailers
