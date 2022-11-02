@@ -1,8 +1,16 @@
-from dataclasses import dataclass, field
+from models.database import Base
+
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import String
 
 
-@dataclass
-class Category:
-    name: str
-    event_target: str
-    jobs_list: list = field(default_factory=list)
+class Category(Base):
+    __tablename__ = 'categories'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    event_target = Column(String)
+
+    def __repr__(self):
+        return f'id: {self.id} / category: {self.name} / event_target: {self.event_target}'

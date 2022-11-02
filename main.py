@@ -1,8 +1,18 @@
+
+from create_database import create_db
+
 from bs4 import BeautifulSoup
 from loggers.loggers import log_info
+
 from models.browser import Browser
 from models.category import Category
+from models.database import DATABASE_NAME
+from models.database import is_exist_db
+from models.database import Session
 from models.job import Job
+
+
+import os.path
 import re
 
 
@@ -52,6 +62,7 @@ def get_categories_list(browser: Browser) -> list:
 
 
 def get_all_jobs_in_category(browser, category):
+    jobs_list = list()
     event_target = category.event_target
     while event_target:
         browser.do_post_back(event_target, follow=True)
@@ -59,18 +70,21 @@ def get_all_jobs_in_category(browser, category):
         rows = table.find_all(filter_only_jobs_rows, recursive=False)
         for row in rows:
             date_from, date_to, job_name, company_name, company_place = row.find_all('td')
-            category.jobs_list.append(Job(category=category.name,
-                                          company=company_name.text.strip(), date_from=date_from.text,
-                                          date_to=date_to.text, name=job_name.text.strip(),
-                                          url=browser.do_post_back(get_event_target(job_name.a.get('href'))),
-                                          place=company_place.text.strip()
-                                          )
-                                      )
+            jobs_list.append(Job(category=category.id,
+                                 company=company_name.text.strip(), date_from=date_from.text,
+                                 date_to=date_to.text, name=job_name.text.strip(),
+                                 url=browser.do_post_back(get_event_target(job_name.a.get('href'))),
+                                 place=company_place.text.strip()
+                                 )
+                             )
         event_target = get_next_page_event_target(browser)
-    return category.jobs_list
+    return jobs_list
 
 
 def main():
+    if not is_exist_db(DATABASE_NAME):
+        create_db()
+
     start_url = 'https://www.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx'
     with Browser(follow_redirects=True, verify=False) as browser:
 
@@ -81,12 +95,21 @@ def main():
             log_info('Не удалось открыть стартовую страницу')
         # получаем eventtarget для всех категорий
         # parsed_data будет содержать все собранные данные, ключи - eventtarget для каждой категории
-        parsed_data = get_categories_list(browser)
-        for category in parsed_data:
-            log_info(f'Начинаем собирать вакансии в категории {category.name}...')
-            get_all_jobs_in_category(browser, category)
-            log_info(f'В категории {category.name} собрано {len(category.jobs_list)} вакансий.')
-            browser.go_url(url=start_url)
+        with Session() as session:
+            categories = session.query(Category).all()
+            while not categories:
+                categories = get_categories_list(browser)
+                session.add_all(categories)
+                session.commit()
+
+            for category in categories:
+                log_info(f'Начинаем собирать вакансии в категории {category.name}...')
+                jobs_list = get_all_jobs_in_category(browser, category)
+                session.add_all(jobs_list)
+                session.commit()
+                log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
+                browser.go_url(url=start_url)
+        log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')
 
 
 if __name__ == '__main__':
