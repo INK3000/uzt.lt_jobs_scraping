@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 
-DATABASE_NAME = 'uzt_job_db.sqlite'
+DATABASE_NAME = 'uzt_job_db2.sqlite'
 engine = create_engine(f'sqlite:///{DATABASE_NAME}')
 Base = declarative_base()
 Session = sessionmaker(bind=engine)

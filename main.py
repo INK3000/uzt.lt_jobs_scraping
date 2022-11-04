@@ -70,10 +70,13 @@ def get_all_jobs_in_category(browser, category):
         rows = table.find_all(filter_only_jobs_rows, recursive=False)
         for row in rows:
             date_from, date_to, job_name, company_name, company_place = row.find_all('td')
-            jobs_list.append(Job(category=category.id,
+            job_url = browser.do_post_back(get_event_target(job_name.a.get('href')))
+            job_id = re.compile('itemID=(.+$)').search(job_url).group(1)
+            jobs_list.append(Job(id=job_id,
+                                 category=category.id,
                                  company=company_name.text.strip(), date_from=date_from.text,
                                  date_to=date_to.text, name=job_name.text.strip(),
-                                 url=browser.do_post_back(get_event_target(job_name.a.get('href'))),
+                                 url=job_url,
                                  place=company_place.text.strip()
                                  )
                              )

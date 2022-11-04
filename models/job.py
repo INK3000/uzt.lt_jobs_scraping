@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKey
 class Job(Base):
     __tablename__ = 'jobs'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     category = Column(Integer, ForeignKey('categories.id'))
     company = Column(String)
     date_from = Column(String)
