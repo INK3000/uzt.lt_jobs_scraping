@@ -2,6 +2,8 @@
 from create_database import create_db
 
 from bs4 import BeautifulSoup
+import warnings
+
 from loggers.loggers import log_info
 
 from models.browser import Browser
@@ -15,6 +17,7 @@ from models.job import Job
 import os.path
 import re
 
+from sqlalchemy import exc as sa_exc
 
 def filter_only_jobs_rows(tag: BeautifulSoup) -> bool:
     result = False
@@ -70,13 +73,19 @@ def get_all_jobs_in_category(browser, category):
         rows = table.find_all(filter_only_jobs_rows, recursive=False)
         for row in rows:
             date_from, date_to, job_name, company_name, company_place = row.find_all('td')
-            job_url = browser.do_post_back(get_event_target(job_name.a.get('href')))
-            job_id = re.compile('itemID=(.+$)').search(job_url).group(1)
-            jobs_list.append(Job(id=job_id,
-                                 category=category.id,
+            full_job_url = browser.do_post_back(get_event_target(job_name.a.get('href')))
+            # full_job_url содержит адрес страницы, itemID, а так же другие не важные параметры,
+            # которые могут изменяться от сессии к сессии, но не влияют на конечный адрес страницы.
+            # Однако они не позволяют обойти проверку на уникальность поля url при добавлении в базу.
+            # Убираем лишние параметры из url, оставляем только адрес страницы и параметр itemID
+            # результат сохраняем в short_job_url (постоянный и уникальный для каждой вакансии)
+            r = re.compile(r'^(https:.+\?).+(itemID.+)$')
+            s = r.search(full_job_url).groups()
+            short_job_url = ''.join(s)
+            jobs_list.append(Job(category=category.id,
                                  company=company_name.text.strip(), date_from=date_from.text,
                                  date_to=date_to.text, name=job_name.text.strip(),
-                                 url=job_url,
+                                 url=short_job_url,
                                  place=company_place.text.strip()
                                  )
                              )
@@ -99,20 +108,27 @@ def main():
         # получаем eventtarget для всех категорий
         # parsed_data будет содержать все собранные данные, ключи - eventtarget для каждой категории
         with Session() as session:
-            categories = session.query(Category).all()
-            while not categories:
-                categories = get_categories_list(browser)
-                session.add_all(categories)
-                session.commit()
+            # отключаем предупреждения от sqlalchemy, возникающие при появлении дублирующихся записей
+            # хотя записи в таблицу не попадают, но предупреждения появляются и портят вывод в консоль
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=sa_exc.SAWarning)
 
-            for category in categories:
-                log_info(f'Начинаем собирать вакансии в категории {category.name}...')
-                jobs_list = get_all_jobs_in_category(browser, category)
-                session.add_all(jobs_list)
-                session.commit()
-                log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
-                browser.go_url(url=start_url)
-        log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')
+                categories = session.query(Category).all()
+                while not categories:
+                    categories = get_categories_list(browser)
+                    session.add_all(categories)
+                    session.commit()
+
+                for category in categories:
+                    log_info(f'Начинаем собирать вакансии в категории {category.name} ({category.id})...')
+                    jobs_list = get_all_jobs_in_category(browser, category)
+                    # category.last_updates = max(jobs_list, lambda i: i.id).id
+                    # TODO: сделать добавление последнего id в категории
+                    session.add_all(jobs_list)
+                    session.commit()
+                    log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
+                    browser.go_url(url=start_url)
+            log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')
 
 
 if __name__ == '__main__':

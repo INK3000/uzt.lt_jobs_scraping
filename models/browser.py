@@ -25,14 +25,25 @@ class Browser(httpx.Client):
         :param url:
         :return:
         """
-        self.response = self.get(url=url)
-        if not self.cookies:
-            self.cookies = self.response.cookies
-        if not self.headers.get('Cookie'):
-            self.headers['Cookie'] = '; '.join([f'{key}={self.cookies[key]}' for key in self.cookies])
-        self.soup = self.get_soup()
-        self.base_url = re.compile(r'^.+/').search(url).group(0)
-        self.action_url = self.soup.find(id='aspnetForm').get('action')
+        tries = 5
+        while True:
+            self.response = self.get(url=url)
+            if not self.cookies:
+                self.cookies = self.response.cookies
+            if not self.headers.get('Cookie'):
+                self.headers['Cookie'] = '; '.join([f'{key}={self.cookies[key]}' for key in self.cookies])
+            self.soup = self.get_soup()
+            self.base_url = re.compile(r'^.+/').search(url).group(0)
+            try:
+                self.action_url = self.soup.find(id='aspnetForm').get('action')
+            except AttributeError:
+                if tries == 0:
+                    print(f'Не удается открыть страницу {url} \n Работа программы завершена.')
+                    exit()
+                else:
+                    tries -= 1
+            else:
+                break
         self.payload = {
                 "ctl00$MasterScriptManager": f"ctl00$MainArea$UpdatePanel1|",
                 "ctl00$calendarLayoutHelperText": "",
