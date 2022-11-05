@@ -120,12 +120,19 @@ def main():
                     session.commit()
 
                 for category in categories:
-                    log_info(f'Начинаем собирать вакансии в категории {category.name} ({category.id})...')
+                    log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
                     jobs_list = get_all_jobs_in_category(browser, category)
-                    # category.last_updates = max(jobs_list, lambda i: i.id).id
-                    # TODO: сделать добавление последнего id в категории
+
                     session.add_all(jobs_list)
                     session.commit()
+
+                    jobs_list = session.query(Job).filter(Job.category == category.id).all()
+                    if jobs_list:
+                        last_update = max(jobs_list, key=lambda i: i.id).id
+                        category.last_update = last_update
+                        session.add(category)
+                        session.commit()
+
                     log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
                     browser.go_url(url=start_url)
             log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')

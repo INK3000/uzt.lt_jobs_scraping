@@ -9,8 +9,11 @@ def main():
     if not is_exist_db(DATABASE_NAME):
         exit()
     with Session() as session:
-        it = session.query(Job, Category).join(Category).all()
-        [print(row.Job.name, row.Category.name) for row in it]
+        it = session.query(Job).filter(Job.category == 1).all()
+        m = max(it, key=lambda i: i.id).id
+        it.last_update = m
+        session.add(it)
+        session.commit()
 
     pass
 
