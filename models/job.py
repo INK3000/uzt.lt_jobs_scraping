@@ -12,6 +12,7 @@ class Job(Base):
     __table_args__ = (UniqueConstraint('category', 'url', sqlite_on_conflict='IGNORE'),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    date_upd = Column(String)
     category = Column(Integer, ForeignKey('categories.id'))
     company = Column(String)
     date_from = Column(String)

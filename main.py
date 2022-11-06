@@ -1,23 +1,17 @@
 
 from create_database import create_db
-
 from bs4 import BeautifulSoup
-import warnings
-
+from datetime import date
 from loggers.loggers import log_info
-
 from models.browser import Browser
 from models.category import Category
 from models.database import DATABASE_NAME
 from models.database import is_exist_db
 from models.database import Session
 from models.job import Job
-
-
-import os.path
 import re
-
 from sqlalchemy import exc as sa_exc
+import warnings
 
 def filter_only_jobs_rows(tag: BeautifulSoup) -> bool:
     result = False
@@ -82,7 +76,7 @@ def get_all_jobs_in_category(browser, category):
             r = re.compile(r'^(https:.+\?).+(itemID.+)$')
             s = r.search(full_job_url).groups()
             short_job_url = ''.join(s)
-            jobs_list.append(Job(category=category.id,
+            jobs_list.append(Job(date_upd=date.today().isoformat(), category=category.id,
                                  company=company_name.text.strip(), date_from=date_from.text,
                                  date_to=date_to.text, name=job_name.text.strip(),
                                  url=short_job_url,
@@ -126,12 +120,12 @@ def main():
                     session.add_all(jobs_list)
                     session.commit()
 
-                    jobs_list = session.query(Job).filter(Job.category == category.id).all()
-                    if jobs_list:
-                        last_update = max(jobs_list, key=lambda i: i.id).id
-                        category.last_update = last_update
-                        session.add(category)
-                        session.commit()
+                    # jobs_list = session.query(Job).filter(Job.category == category.id).all()
+                    # if jobs_list:
+                    #     last_update = max(jobs_list, key=lambda i: i.id).id
+                    #     category.last_update = last_update
+                    #     session.add(category)
+                    #     session.commit()
 
                     log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
                     browser.go_url(url=start_url)
