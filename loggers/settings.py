@@ -1,7 +1,18 @@
+
 logger_config = {
     'version': 1,
     'formatters': {
-        'std_format': {
+        'blue': {
+            'format': '\x1b[34;20m' + '{asctime} {levelname}: {message}' + '\x1b[0m',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+            'style': '{'
+        },
+        'yellow': {
+            'format': '\x1b[33;20m' + '{asctime} {levelname}: {message}' + '\x1b[0m',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+            'style': '{'
+        },
+        'default': {
             'format': '{asctime} {levelname}: {message}',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
@@ -10,14 +21,19 @@ logger_config = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
-            'formatter': 'std_format'
+            'level': 'INFO',
+            'formatter': 'blue'
+        },
+        'telegram': {
+            'class': 'loggers.handlers.TelegramBotHandler',
+            'level': 'INFO',
+            'formatter': 'default'
         }
     },
     'loggers': {
         'main_logger': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
+            'level': 'INFO',
+            'handlers': ['console', 'telegram'],
             'propagate': False
 
         }
@@ -27,4 +43,3 @@ logger_config = {
     # 'incremental': False,
     # 'root': {}, # '': {},
 }
-

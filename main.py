@@ -13,6 +13,7 @@ import re
 from sqlalchemy import exc as sa_exc
 import warnings
 
+
 def filter_only_jobs_rows(tag: BeautifulSoup) -> bool:
     result = False
     if tag.name == 'tr':
