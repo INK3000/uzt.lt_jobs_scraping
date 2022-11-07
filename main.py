@@ -99,7 +99,8 @@ def main():
         if browser.response.is_success:
             log_info('Успешно перешли на стартовую страницу')
         else:
-            log_info('Не удалось открыть стартовую страницу')
+            log_info('Не удалось открыть стартовую страницу \n Работа программы завершена')
+            exit()
         # получаем eventtarget для всех категорий
         # parsed_data будет содержать все собранные данные, ключи - eventtarget для каждой категории
         with Session() as session:
@@ -116,20 +117,14 @@ def main():
 
                 for category in categories:
                     log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
-                    jobs_list = get_all_jobs_in_category(browser, category)
 
+                    jobs_list = get_all_jobs_in_category(browser, category)
                     session.add_all(jobs_list)
                     session.commit()
 
-                    # jobs_list = session.query(Job).filter(Job.category == category.id).all()
-                    # if jobs_list:
-                    #     last_update = max(jobs_list, key=lambda i: i.id).id
-                    #     category.last_update = last_update
-                    #     session.add(category)
-                    #     session.commit()
-
                     log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
                     browser.go_url(url=start_url)
+
             log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')
 
 

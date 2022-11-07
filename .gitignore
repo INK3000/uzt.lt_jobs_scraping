@@ -3,3 +3,4 @@
 .git
 __pycache__
 uzt_job_db2.sqlite
+uzt_job_db.sqlite
