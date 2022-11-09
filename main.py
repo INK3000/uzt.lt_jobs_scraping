@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 from create_database import create_db
 from bs4 import BeautifulSoup
 from datetime import date

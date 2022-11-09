@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from datetime import date
 from loggers.loggers import log_info
 from models.job import Job
