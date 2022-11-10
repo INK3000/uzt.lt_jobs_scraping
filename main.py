@@ -93,7 +93,7 @@ def main():
         create_db()
 
     start_url = 'https://www.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx'
-    with Browser(follow_redirects=True, verify=False) as browser:
+    with Browser(follow_redirects=True, verify=False, timeout=None) as browser:
 
         browser.go_url(url=start_url)
         if browser.response.is_success:

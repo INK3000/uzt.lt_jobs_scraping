@@ -13,6 +13,7 @@ class User(Base):
     id: Column = Column(Integer, primary_key=True, autoincrement=True)
     user_tg_id = Column(String)
     category = Column(String)
+    last_send_date = Column(String)
 
     def __repr__(self):
         return f'id:{self.id}, user_tg_id: {self.user_tg_id}, category:{self.category}'

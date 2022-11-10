@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+import datetime
 from datetime import date
+from typing import Callable
+
 from loggers.loggers import log_info
 from models.job import Job
 from models.user import User
@@ -23,6 +26,23 @@ def format_data(job: Job) -> str:
     return f'{job.date_from} [{job.name}]({job.url}) {job.company} {job.place}'
 
 
+def int_from_isodate(isodate: str) -> int:
+    result = 0
+    if isodate:
+        result = int(''.join(isodate.split('-')))
+    return result
+
+
+def fltr_date_less_eq_than(isodate: str) -> Callable:
+    isodate = int_from_isodate(isodate)
+
+    def wrap(job: Job) -> bool:
+        isodate_from_bd = int_from_isodate(job.date_upd)
+        return isodate <= isodate_from_bd
+
+    return wrap
+
+
 def main():
     data_to_send = dict()
     if not is_exist_db(DATABASE_NAME):
@@ -32,21 +52,29 @@ def main():
         if users:
             for user in users:
                 category = get_users_category(user)
-                today = date.today()
+                today = date.today().isoformat()
                 if category:
-                    message_list = map(format_data, session.query(Job).order_by(Job.date_from).filter(and_(Job.category.in_(category), Job.date_upd == today)).all())
+                    jobs_list = session.query(Job).order_by(Job.date_from).filter(Job.category.in_(category)).all()
                 else:
-                    message_list = map(format_data, session.query(Job).all())
+                    jobs_list = session.query(Job).all()
 
-                data_to_send[user.user_tg_id] = message_list
+                filter_fn = fltr_date_less_eq_than(user.last_send_date)
+                jobs_list = list(filter(filter_fn, jobs_list))
 
-    for user_id, message_list in data_to_send.items():
-        log_info(f'Стартует рассылка пользователю {user_id}...')
-        for message in message_list:
-            bot_send_message(message, user_id)
-        log_info(f'рассылка пользователю {user_id} завершена.')
+                message_list = map(format_data, jobs_list)
 
-
+                data_to_send[user] = message_list
+            try:
+                for user, message_list in data_to_send.items():
+                    user_tg_id = user.user_tg_id
+                    log_info(f'Стартует рассылка пользователю {user_tg_id}...')
+                    for message in message_list:
+                        bot_send_message(message, user_tg_id)
+                    log_info(f'рассылка пользователю {user_tg_id} завершена.')
+            except Exception as e:
+                log_info(e)
+            else:
+                user.last_send_date = today
 
 
 if __name__ == '__main__':
