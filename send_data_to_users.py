@@ -61,9 +61,9 @@ def main():
                 filter_fn = fltr_date_less_eq_than(user.last_send_date)
                 jobs_list = list(filter(filter_fn, jobs_list))
 
-                message_list = map(format_data, jobs_list)
-
-                data_to_send[user] = message_list
+                if jobs_list:
+                    message_list = map(format_data, jobs_list)
+                    data_to_send[user] = message_list
             try:
                 for user, message_list in data_to_send.items():
                     user_tg_id = user.user_tg_id
@@ -71,10 +71,12 @@ def main():
                     for message in message_list:
                         bot_send_message(message, user_tg_id)
                     log_info(f'рассылка пользователю {user_tg_id} завершена.')
+                    user.last_send_date = today
             except Exception as e:
                 log_info(e)
-            else:
-                user.last_send_date = today
+
+            session.add_all(users)
+            session.commit()
 
 
 if __name__ == '__main__':
