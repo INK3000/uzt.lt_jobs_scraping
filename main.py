@@ -116,14 +116,20 @@ def main():
                     session.commit()
 
                 for category in categories:
-                    log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
+                    try:
+                        log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
 
-                    jobs_list = get_all_jobs_in_category(browser, category)
-                    session.add_all(jobs_list)
-                    session.commit()
+                        jobs_list = get_all_jobs_in_category(browser, category)
+                        session.add_all(jobs_list)
+                        session.commit()
 
-                    log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
-                    browser.go_url(url=start_url)
+                        log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
+                        browser.go_url(url=start_url)
+
+                    except Exception as e:
+                        log_info(f'Возникла ошибка при работе с категорией {category.name}.\n'
+                                 f'Описание ошибки:\n{e}'
+                                 f'Продолжаем работу.')
 
             log_info(f'Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}')
 
