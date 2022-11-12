@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!.venv/bin/python
 from create_database import create_db
 from bs4 import BeautifulSoup
 from datetime import date
@@ -92,7 +92,7 @@ def main():
     if not is_exist_db(DATABASE_NAME):
         create_db()
 
-    start_url = 'https://uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx'
+    start_url = 'https://portal.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx'
     with Browser(follow_redirects=True, verify=False, timeout=None) as browser:
 
         browser.go_url(url=start_url)

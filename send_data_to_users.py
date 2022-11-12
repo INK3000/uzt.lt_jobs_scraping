@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-import datetime
+#!.venv/bin/python
 from datetime import date
 from typing import Callable
 
@@ -46,6 +45,7 @@ def fltr_date_less_eq_than(isodate: str) -> Callable:
 def main():
     data_to_send = dict()
     if not is_exist_db(DATABASE_NAME):
+        log_info('База данных не найдена.\nПрограмма завершена.') 
         exit()
     with Session() as session:
         users = get_users(session)
@@ -64,16 +64,16 @@ def main():
                 if jobs_list:
                     message_list = map(format_data, jobs_list)
                     data_to_send[user] = message_list
-            try:
+            if data_to_send:
                 for user, message_list in data_to_send.items():
                     user_tg_id = user.user_tg_id
                     log_info(f'Стартует рассылка пользователю {user_tg_id}...')
                     for message in message_list:
                         bot_send_message(message, user_tg_id)
-                    log_info(f'рассылка пользователю {user_tg_id} завершена.')
+                    log_info(f'Рассылка пользователю {user_tg_id} завершена.')
                     user.last_send_date = today
-            except Exception as e:
-                log_info(e)
+            else:
+                log_info('Новых данных нет. Рассылка не выполнена. Программа завершена')
 
             session.add_all(users)
             session.commit()
