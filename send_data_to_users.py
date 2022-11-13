@@ -1,6 +1,9 @@
 #!.venv/bin/python
 from datetime import date
 from typing import Callable
+import json
+
+import sqlalchemy.orm.query
 
 from loggers.loggers import log_info
 from models.job import Job
@@ -12,34 +15,18 @@ from models.database import Session
 from sqlalchemy.sql import and_
 
 
-def get_users(session):
-    return session.query(User).all()
-
-
-def get_users_category(user) -> tuple:
-    if len(user.category) > 0:
-        return user.category.split(',')
-
-
 def format_data(job: Job) -> str:
     return f'{job.date_from} [{job.name}]({job.url}) {job.company} {job.place}'
 
 
-def int_from_isodate(isodate: str) -> int:
-    result = 0
-    if isodate:
-        result = int(''.join(isodate.split('-')))
-    return result
-
-
-def fltr_date_less_eq_than(isodate: str) -> Callable:
-    isodate = int_from_isodate(isodate)
-
-    def wrap(job: Job) -> bool:
-        isodate_from_bd = int_from_isodate(job.date_upd)
-        return isodate <= isodate_from_bd
-
-    return wrap
+def do_filter(query: sqlalchemy.orm.query.Query, subscribes: dict) -> dict:
+    data = {'is_new_data': False}
+    if subscribes:
+        for key, value in subscribes.items():
+            temp_query = query.filter(and_(Job.category == key, Job.id > value)).order_by(Job.id)
+            data[key] = (temp_query.all())
+            data['is_new_data'] = bool(data[key])
+    return data
 
 
 def main():
@@ -48,32 +35,30 @@ def main():
         log_info('База данных не найдена.\nПрограмма завершена.') 
         exit()
     with Session() as session:
-        users = get_users(session)
+        users = session.query(User).all()
         if users:
             for user in users:
-                category = get_users_category(user)
-                today = date.today().isoformat()
-                if category:
-                    jobs_list = session.query(Job).order_by(Job.date_from).filter(Job.category.in_(category)).all()
-                else:
-                    jobs_list = session.query(Job).all()
+                subscribes: dict = json.loads(user.subscribes)
+                user_tg_id = user.user_tg_id
 
-                filter_fn = fltr_date_less_eq_than(user.last_send_date)
-                jobs_list = list(filter(filter_fn, jobs_list))
+                query = session.query(Job)
+                data: dict = do_filter(query, subscribes)
 
-                if jobs_list:
-                    message_list = map(format_data, jobs_list)
-                    data_to_send[user] = message_list
-            if data_to_send:
-                for user, message_list in data_to_send.items():
-                    user_tg_id = user.user_tg_id
+                if data['is_new_data']:
+                    del data['is_new_data']
+                    subscribes = {k: max(v, key=lambda i: i.id).id for k, v in data.items()}
+                    raw_message_list = list()
+                    [raw_message_list.extend(value) for value in data.values()]
+                    formatted_message_list = map(format_data, raw_message_list)
                     log_info(f'Стартует рассылка пользователю {user_tg_id}...')
-                    for message in message_list:
-                        bot_send_message(message, user_tg_id)
+                    for message in formatted_message_list:
+                        resp = bot_send_message(message, user_tg_id)
+                        print(resp)
                     log_info(f'Рассылка пользователю {user_tg_id} завершена.')
-                    user.last_send_date = today
-            else:
-                log_info('Новых данных нет. Рассылка не выполнена. Программа завершена')
+
+                    user.subscribes = json.dumps(subscribes)
+                else:
+                    log_info(f'Новых данных для пользователя {user_tg_id} нет.')
 
             session.add_all(users)
             session.commit()

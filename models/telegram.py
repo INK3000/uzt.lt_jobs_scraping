@@ -19,5 +19,5 @@ def bot_send_message(message, chat_id=ADMIN_TELEGRAM_USER_ID):
                'text': message,
                'parse_mode': 'markdown'}
     resp = httpx.post(url=url, data=payload)
-    pass
+    return resp
 

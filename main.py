@@ -119,6 +119,7 @@ def main():
                         log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
 
                         jobs_list = get_all_jobs_in_category(browser, category)
+                        jobs_list.reverse()
                         session.add_all(jobs_list)
                         session.commit()
 
