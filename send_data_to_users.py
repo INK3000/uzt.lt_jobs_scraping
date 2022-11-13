@@ -8,6 +8,7 @@ import sqlalchemy.orm.query
 from loggers.loggers import log_info
 from models.job import Job
 from models.user import User
+from models.category import Category
 from models.telegram import bot_send_message
 from models.database import DATABASE_NAME
 from models.database import is_exist_db
@@ -30,12 +31,13 @@ def do_filter(query: sqlalchemy.orm.query.Query, subscribes: dict) -> dict:
 
 
 def main():
-    data_to_send = dict()
+
     if not is_exist_db(DATABASE_NAME):
         log_info('База данных не найдена.\nПрограмма завершена.') 
         exit()
     with Session() as session:
         users = session.query(User).all()
+        categories = session.query(Category).all()
         if users:
             for user in users:
                 subscribes: dict = json.loads(user.subscribes)
@@ -46,16 +48,18 @@ def main():
 
                 if data['is_new_data']:
                     del data['is_new_data']
-                    subscribes = {k: max(v, key=lambda i: i.id).id for k, v in data.items()}
-                    raw_message_list = list()
-                    [raw_message_list.extend(value) for value in data.values()]
-                    formatted_message_list = map(format_data, raw_message_list)
                     log_info(f'Стартует рассылка пользователю {user_tg_id}...')
-                    for message in formatted_message_list:
-                        resp = bot_send_message(message, user_tg_id)
-                        print(resp)
-                    log_info(f'Рассылка пользователю {user_tg_id} завершена.')
+                    for category, jobs_list in data.items():
+                        category_name = categories[int(category)-1].name
+                        info_message = f'В категории {category_name} {len(jobs_list)} вакансий.'
+                        log_info(info_message)
+                        resp = bot_send_message(info_message, user_tg_id)
+                        subscribes[category] = max(jobs_list, key=lambda i: i.id).id
+                        formatted_message_list = map(format_data, jobs_list)
+                        for message in formatted_message_list:
+                            resp = bot_send_message(message, user_tg_id)
 
+                    log_info(f'Рассылка пользователю {user_tg_id} завершена.')
                     user.subscribes = json.dumps(subscribes)
                 else:
                     log_info(f'Новых данных для пользователя {user_tg_id} нет.')
