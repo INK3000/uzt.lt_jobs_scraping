@@ -1,6 +1,6 @@
 #!.venv/bin/python
 from datetime import date
-from typing import Callable
+from typing import Callable, Iterable, Sized
 import json
 
 import sqlalchemy.orm.query
@@ -30,6 +30,18 @@ def do_filter(query: sqlalchemy.orm.query.Query, subscribes: dict) -> dict:
     return data
 
 
+def do_merge(messages: Sized, part_size: int = 10, header: str = '',):
+    start = 0
+    end = 0
+    while end <= len(messages):
+        end += part_size
+        chunk = '\n\n'.join([format_data(i) for i in messages[start: end]])
+        result = f"*{header}* \n\n{chunk}\n\n"
+        yield result
+        start += part_size
+        header = ''
+
+
 def main():
 
     if not is_exist_db(DATABASE_NAME):
@@ -50,14 +62,14 @@ def main():
                     del data['is_new_data']
                     log_info(f'Стартует рассылка пользователю {user_tg_id}...')
                     for category, jobs_list in data.items():
-                        category_name = categories[int(category)-1].name
-                        info_message = f'В категории {category_name} {len(jobs_list)} вакансий.'
-                        log_info(info_message)
-                        resp = bot_send_message(info_message, user_tg_id)
-                        subscribes[category] = max(jobs_list, key=lambda i: i.id).id
-                        formatted_message_list = map(format_data, jobs_list)
-                        for message in formatted_message_list:
-                            resp = bot_send_message(message, user_tg_id)
+                        if jobs_list:
+                            category_name = categories[int(category)-1].name
+                            info_message = f'В категории {category_name} {len(jobs_list)} вакансий.'
+                            log_info(info_message)
+                            subscribes[category] = max(jobs_list, key=lambda i: i.id).id
+                            formatted_message_list = do_merge(jobs_list, header=info_message)
+                            for message in formatted_message_list:
+                                resp = bot_send_message(message, user_tg_id)
 
                     log_info(f'Рассылка пользователю {user_tg_id} завершена.')
                     user.subscribes = json.dumps(subscribes)
