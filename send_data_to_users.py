@@ -30,7 +30,7 @@ def do_filter(query: sqlalchemy.orm.query.Query, subscribes: dict) -> dict:
     return data
 
 
-def do_merge(messages: Sized, part_size: int = 10, header: str = '',):
+def do_merge(messages: Sized, part_size: int = 30, header: str = '',):
     start = 0
     end = 0
     while end <= len(messages):
