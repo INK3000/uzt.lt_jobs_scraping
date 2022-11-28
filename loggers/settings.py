@@ -1,19 +1,21 @@
+import os
 
+HOSTNAME = f'{os.getenv("HOSTNAME")}:'
 logger_config = {
     'version': 1,
     'formatters': {
         'blue': {
-            'format': '\x1b[34;20m' + '{asctime} {levelname}: {message}' + '\x1b[0m',
+            'format': '\x1b[34;20m' + HOSTNAME + ' {asctime} {levelname}: {message}' + '\x1b[0m',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         },
         'yellow': {
-            'format': '\x1b[33;20m' + '{asctime} {levelname}: {message}' + '\x1b[0m',
+            'format': '\x1b[33;20m' + HOSTNAME + ' {asctime} {levelname}: {message}' + '\x1b[0m',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         },
         'default': {
-            'format': '{asctime} {levelname}: {message}',
+            'format': HOSTNAME + ' {asctime} {levelname}: {message}',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         }
