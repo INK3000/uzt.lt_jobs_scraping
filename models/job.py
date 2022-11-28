@@ -22,4 +22,4 @@ class Job(Base):
     url = Column(String)
 
     def __repr__(self):
-        return f'Company: {self.company} Job title: {self.name} Place: {self.place}, url: {self.url}'
+        return f'Company: {self.company} Job title: {self.name} Place: {self.place}, url: {self.url}, id: {self.id}'

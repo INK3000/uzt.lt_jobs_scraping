@@ -11,6 +11,7 @@ from models.database import Session
 from models.job import Job
 import re
 from sqlalchemy import exc as sa_exc
+from sqlalchemy import func
 import warnings
 
 
@@ -116,14 +117,18 @@ def main():
 
                 for category in categories:
                     try:
-                        # log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
+                        log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
 
                         jobs_list = get_all_jobs_in_category(browser, category)
                         jobs_list.reverse()
                         session.add_all(jobs_list)
                         session.commit()
 
-                        # log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
+                        category.last_id = session.query(func.max(Job.id)).filter(Job.category == category.id).order_by(Job.id.desc()).one()[0]
+                        session.add(category)
+                        session.commit()
+
+                        log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
                         browser.go_url(url=start_url)
 
                     except Exception as e:

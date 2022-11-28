@@ -9,7 +9,7 @@ from loggers.loggers import log_info
 from models.job import Job
 from models.user import User
 from models.category import Category
-from models.telegram import bot_send_message
+from models import telegram
 from models.database import DATABASE_NAME
 from models.database import is_exist_db
 from models.database import Session
@@ -69,7 +69,7 @@ def main():
                             subscribes[category] = max(jobs_list, key=lambda i: i.id).id
                             formatted_message_list = do_merge(jobs_list, header=info_message)
                             for message in formatted_message_list:
-                                resp = bot_send_message(message, user_tg_id)
+                                resp = telegram.send_message(message, user_tg_id)
 
                     log_info(f'Рассылка пользователю {user_tg_id} завершена.')
                     user.subscribes = json.dumps(subscribes)
