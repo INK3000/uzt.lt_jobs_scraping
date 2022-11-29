@@ -33,18 +33,19 @@ async def command_start(message: types.Message):
             await message.answer(f'You are already started\n\n{text}')
 
 
-# @dp.message_handler(commands=['subscribe'])
-# async def command_start(message: types.Message):
-#     user_tg_id = message.chat.id
-#     categories_to_subscribe = [i.strip() for i in "1, 2,3 ".split(',')]
-#     with Session() as session:
-#         user = session.query(User).filter(User.user_tg_id ==user_tg_id).one_or_none()
-#         subscribes = {category.id: category.last_id for category in session.query(Category).filter(Category.id.in_(categories_to_subscribe)).all()}
-#         if user:
-#             user.subscribes = json.dumps(subscribes)
-#             session.add(user)
-#             session.commit()
-#             await message.answer(f'You are subscribed!')
+@dp.message_handler()
+async def command_start(message: types.Message):
+    text = message.text
+    user_tg_id = message.chat.id
+    categories_to_subscribe = [i.strip() for i in text.split(',')]
+    with Session() as session:
+        user = session.query(User).filter(User.user_tg_id ==user_tg_id).one_or_none()
+        subscribes = {category.id: category.last_id for category in session.query(Category).filter(Category.id.in_(categories_to_subscribe)).all()}
+        if user:
+            user.subscribes = json.dumps(subscribes)
+            session.add(user)
+            session.commit()
+            await message.answer(f'You are subscribed on categories {", ".join([str(k) for k in subscribes])}')
 
 def main():
     if not is_exist_db(DATABASE_NAME):
