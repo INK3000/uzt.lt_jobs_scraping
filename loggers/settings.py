@@ -1,21 +1,21 @@
-import os
+import sys
 
-HOSTNAME = f'{os.getenv("HOSTNAME")}:'
+ARGV = sys.argv[1] if len(sys.argv) > 1 else ""
 logger_config = {
     'version': 1,
     'formatters': {
         'blue': {
-            'format': '\x1b[34;20m' + HOSTNAME + ' {asctime} {levelname}: {message}' + '\x1b[0m',
+            'format': '\x1b[34;20m' + ARGV + ' {asctime} {levelname}: {message}' + '\x1b[0m',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         },
         'yellow': {
-            'format': '\x1b[33;20m' + HOSTNAME + ' {asctime} {levelname}: {message}' + '\x1b[0m',
+            'format': '\x1b[33;20m' + ARGV + ' {asctime} {levelname}: {message}' + '\x1b[0m',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         },
         'default': {
-            'format': HOSTNAME + ' {asctime} {levelname}: {message}',
+            'format': ARGV + ' {asctime} {levelname}: {message}',
             'datefmt': '%Y-%m-%d %H:%M:%S',
             'style': '{'
         }
