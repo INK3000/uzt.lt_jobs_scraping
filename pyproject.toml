@@ -12,7 +12,7 @@ httpx = "^0.23.0"
 bs4 = "^0.0.1"
 lxml = "^4.9.1"
 sqlalchemy = "^1.4.42"
-aiogram = "^2.23.1"
+aiogram = "3.0b6"
 
 
 [build-system]
