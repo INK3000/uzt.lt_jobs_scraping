@@ -1,11 +1,4 @@
-import json
-
-from models.database import Session
-from models.category import Category
-from models.user import User
-
-
-class Subscribes:
+class Subscribes():
     '''
     class for users subscribes
     for init need subscribes
@@ -54,28 +47,3 @@ class Subscribes:
     def text_to_list(text):
         result_list = [i.strip() for i in text.split(',')]
         return result_list
-
-
-def main():
-    with Session() as session:
-        categories = session.query(Category).all()
-        user = session.query(User).filter(User.id == 1).one_or_none()
-        subscribes = Subscribes(user.subscribes, categories)
-    while True:
-        answer = input('...$ ')
-        match answer:
-            case '/add' | '/remove':
-                text = input('укажите категории через запятую ')
-                resp = subscribes.update(text=text, oper=answer)
-                if resp:
-                    user.subscribes = json.dumps(subscribes.added)
-                    session.add(user)
-                    session.commit()
-            case '/show':
-                print(subscribes)
-            case '/quit':
-                break
-
-
-if __name__ == '__main__':
-    main()
