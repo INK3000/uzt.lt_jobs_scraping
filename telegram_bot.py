@@ -42,13 +42,12 @@ class FSMUpdateSubs(StatesGroup):
 def update_subscribes(text: str, data: dict, oper: str) -> dict:
     subscribes = data['subscribes']
     user = data['user']
-    if subscribes:
-        response = subscribes.update(text=text, oper=oper)
-        if response:
-            with Session() as session:
-                user.subscribes = json.dumps(subscribes.added)
-                session.add(user)
-                session.commit()
+    response = subscribes.update(text=text, oper=oper)
+    if response:
+        with Session() as session:
+            user.subscribes = json.dumps(subscribes.added)
+            session.add(user)
+            session.commit()
     return data
 
 
@@ -58,7 +57,8 @@ async def cmd_start(message: types.Message, state: FSMContext):
     user_name = message.chat.username
     with Session() as session:
         categories = session.query(Category).all()
-        user = session.query(User).filter(User.user_tg_id == user_tg_id).one_or_none()
+        user = session.query(User).filter(
+            User.user_tg_id == user_tg_id).one_or_none()
 
         if not user:
             session.add(User(user_tg_id=user_tg_id))
@@ -69,6 +69,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
         subscribes = Subscribes(json.loads(user.subscribes), categories)
 
+        await state.set_state(FSMUpdateSubs.started)
         await state.set_data({
             'user': user,
             'categories': categories,
@@ -85,7 +86,10 @@ async def cmd_start(message: types.Message, state: FSMContext):
                                          KeyboardButton(
                                              text='Remove from my subscribes')
                                      ]
-                                 ]
+                                 ],
+                                 one_time_keyboard=True,
+                                 resize_keyboard=True
+
                              ))
 
 
@@ -94,24 +98,29 @@ async def cmd_start(message: types.Message, state: FSMContext):
 async def cmd_show(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     subscribes = data['subscribes']
-    await message.answer(f'Вы подписаны на категории: {subscribes}')
+    print(bool(subscribes), type(subscribes))
+    if subscribes:
+        text = f'Вы подписаны на категории: {subscribes}'
+    else:
+        text = 'Вы не подписаны ни на одну категорию.'
+    await message.answer(text)
 
 
 @dp.message(Command(commands=['add']))
 @dp.message(Text(text='Add to my subscribes'))
-async def cmd_choose_categories(message: types.Message, state: FSMContext) -> None:
+async def cmd_choose_to_add_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-    # print(data)
     categories = data['categories']
-    text = '\n'.join([f'{category.id}: {category.name}' for category in categories])
+    text = '\n'.join(
+        [f'{category.id}: {category.name}' for category in categories])
     await message.answer(text)
-    await message.answer(f'Укажите через запятую интересующие вас категории:')
+    await message.answer('Укажите через запятую интересующие вас категории:')
     await state.set_state(FSMUpdateSubs.add)
 
 
 @dp.message(Command(commands=['remove']))
 @dp.message(Text(text='Remove from my subscribes'))
-async def cmd_choose_categories(message: types.Message, state: FSMContext) -> None:
+async def cmd_choose_to_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     text = f'Вы подписаны на категории: {data["subscribes"]}'
     await message.answer(text)
@@ -128,7 +137,7 @@ async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
 
 
 @dp.message(FSMUpdateSubs.remove)
-async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
+async def cmd_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper='/remove')
     await message.answer(f'Теперь вы подписаны на категории: {data["subscribes"]}')

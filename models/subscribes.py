@@ -5,17 +5,21 @@ class Subscribes():
 
     '''
     class for users subscribes
-    for init need subscribes
+    for init need subscribes@dp.message(Command(commands=['show']))
     '''
     # subscribes_d: {"6": 1234, "3": 2332}
     # categories: [Category, ...]
     # Category: id, name, event_target, last_id
-    def __init__(self, subscribes_d: dict, categories: Category):
+
+    def __init__(self, subscribes_d: dict, categories: list[Category]):
         self.added = subscribes_d
         self.not_added: dict = self.get_not_added(categories)
 
     def __repr__(self):
         return ', '.join(list(sorted(self.added)))
+
+    def __bool__(self):
+        return bool(self.added)
 
     def get_not_added(self, categories):
         all_categories = {
