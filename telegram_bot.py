@@ -70,10 +70,9 @@ async def cmd_start(message: types.Message, state: FSMContext):
             session.commit()
             message.answer(f'You are welcome, {user_name}!')
         else:
-            await message.answer(f'You are already started, {user_name}')
+            await message.answer(f'Welcome back, {user_name}!')
 
         subscribes = Subscribes(json.loads(user.subscribes), categories)
-        print(subscribes)
 
         await state.set_state(FSMUpdateSubs.started)
         await state.set_data({
@@ -114,9 +113,10 @@ async def cmd_choose_to_add_categories(message: types.Message, state: FSMContext
 @dp.message(Text(text='Remove from my subscribes'))
 async def cmd_choose_to_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-    text = f'Вы подписаны на категории: {data["subscribes"]}'
+    text = f'You are subscribed to categories: {data["subscribes"]}'
     await message.answer(text)
-    await message.answer(f'Specify the categories you want to remove from your subscription, separated by commas:')
+    await message.answer('Specify the categories you want to remove '
+                         'from your subscription, separated by commas:')
     await state.set_state(FSMUpdateSubs.remove)
 
 
