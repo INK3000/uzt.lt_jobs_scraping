@@ -33,11 +33,11 @@ load-plugins=
     pylint.extensions.redefined_variable_type,
     pylint.extensions.comparison_placement,
     pylint.extensions.broad_try_clause,
-#    pylint.extensions.dict_init_mutate,
+    pylint.extensions.dict_init_mutate,
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use.
-jobs=2
+jobs=1
 
 # When enabled, pylint would attempt to guess common misconfiguration and emit
 # user-friendly hints instead of false-positive error messages.
@@ -79,9 +79,9 @@ fail-on=
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-#enable=
-#   use-symbolic-message-instead,
-#   useless-suppression,
+enable=
+    use-symbolic-message-instead,
+    useless-suppression,
 
 # Disable the message, report, category or checker with the given id(s). You
 # can either give multiple identifiers separated by comma (,) or put this
@@ -94,8 +94,15 @@ fail-on=
 # --disable=W"
 
 disable=
+    attribute-defined-outside-init,
+    invalid-name,
     missing-docstring,
-    W0141,
+    protected-access,
+    too-few-public-methods,
+    # handled by black
+    format,
+    # We anticipate #3512 where it will become optional
+    fixme,
 
 
 [REPORTS]

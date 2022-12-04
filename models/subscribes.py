@@ -1,15 +1,21 @@
+from models.category import Category
+
+
 class Subscribes():
+
     '''
     class for users subscribes
     for init need subscribes
     '''
-
-    def __init__(self, subscribes_d, categories):
-        self.added: dict = json.loads(subscribes_d)
+    # subscribes_d: {"6": 1234, "3": 2332}
+    # categories: [Category, ...]
+    # Category: id, name, event_target, last_id
+    def __init__(self, subscribes_d: dict, categories: Category):
+        self.added = subscribes_d
         self.not_added: dict = self.get_not_added(categories)
 
     def __repr__(self):
-        return ','.join(list(sorted(self.added)))
+        return ', '.join(list(sorted(self.added)))
 
     def get_not_added(self, categories):
         all_categories = {
