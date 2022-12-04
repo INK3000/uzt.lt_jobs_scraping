@@ -16,7 +16,7 @@ class Subscribes():
         self.not_added: dict = self.get_not_added(categories)
 
     def __repr__(self):
-        return ', '.join(list(sorted(self.added)))
+        return ', '.join(sorted(list(self.added)))
 
     def __bool__(self):
         return bool(self.added)

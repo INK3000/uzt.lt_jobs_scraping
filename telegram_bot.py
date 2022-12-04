@@ -6,15 +6,11 @@ import json
 
 from aiogram import Bot
 from aiogram import Dispatcher
-from aiogram import F
 from aiogram import Router
 from aiogram.filters import Command, Text
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types
-from aiogram.types import ReplyKeyboardMarkup
-from aiogram.types import ReplyKeyboardRemove
-from aiogram.types import KeyboardButton
 
 
 from models.telegram import BOT_TOKEN
@@ -37,6 +33,14 @@ class FSMUpdateSubs(StatesGroup):
     started = State()
     add = State()
     remove = State()
+
+
+def if_subscribes_text(subscribes: Subscribes) -> str:
+    if subscribes:
+        text = f'You are subscribed to categories: {subscribes}'
+    else:
+        text = 'You are not subscribed to any category.'
+    return text
 
 
 def update_subscribes(text: str, data: dict, oper: str) -> dict:
@@ -75,22 +79,12 @@ async def cmd_start(message: types.Message, state: FSMContext):
             'categories': categories,
             'subscribes': subscribes,
         })
-        await message.answer(text='What you want to do?',
-                             reply_markup=ReplyKeyboardMarkup(
-                                 keyboard=[
-                                     [
-                                         KeyboardButton(
-                                             text='Show my subscribes'),
-                                         KeyboardButton(
-                                             text='Add to my subscribes'),
-                                         KeyboardButton(
-                                             text='Remove from my subscribes')
-                                     ]
-                                 ],
-                                 one_time_keyboard=True,
-                                 resize_keyboard=True
-
-                             ))
+        await message.answer(
+            text='/start - if something wrong - try start again \n'
+            '/add - add categories to my subscribes\n'
+            '/remove - remove categories from my subscribes\n'
+            '/show - show my subscribes'
+        )
 
 
 @dp.message(Command(commands=['show']))
@@ -99,11 +93,7 @@ async def cmd_show(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     subscribes = data['subscribes']
     print(bool(subscribes), type(subscribes))
-    if subscribes:
-        text = f'Вы подписаны на категории: {subscribes}'
-    else:
-        text = 'Вы не подписаны ни на одну категорию.'
-    await message.answer(text)
+    await message.answer(if_subscribes_text(subscribes))
 
 
 @dp.message(Command(commands=['add']))
@@ -114,7 +104,7 @@ async def cmd_choose_to_add_categories(message: types.Message, state: FSMContext
     text = '\n'.join(
         [f'{category.id}: {category.name}' for category in categories])
     await message.answer(text)
-    await message.answer('Укажите через запятую интересующие вас категории:')
+    await message.answer('Specify the categories you are interested in, separated by commas:')
     await state.set_state(FSMUpdateSubs.add)
 
 
@@ -124,7 +114,7 @@ async def cmd_choose_to_remove_categories(message: types.Message, state: FSMCont
     data = await state.get_data()
     text = f'Вы подписаны на категории: {data["subscribes"]}'
     await message.answer(text)
-    await message.answer(f'Укажите через запятую категории, которые хотите удалить из своей подписки:')
+    await message.answer(f'Specify the categories you want to remove from your subscription, separated by commas:')
     await state.set_state(FSMUpdateSubs.remove)
 
 
@@ -132,7 +122,7 @@ async def cmd_choose_to_remove_categories(message: types.Message, state: FSMCont
 async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper='/add')
-    await message.answer(f'Теперь вы подписаны на категории: {data["subscribes"]}')
+    await message.answer(if_subscribes_text(data["subscribes"]))
     await state.set_state(FSMUpdateSubs.started)
 
 
@@ -140,14 +130,14 @@ async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
 async def cmd_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper='/remove')
-    await message.answer(f'Теперь вы подписаны на категории: {data["subscribes"]}')
+    await message.answer(if_subscribes_text(data["subscribes"]))
     await state.set_state(FSMUpdateSubs.started)
 
 
 async def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     if not is_exist_db(DATABASE_NAME):
-        log_info('База данных не найдена. Бот не будет запущен.')
+        log_info('The database was not found. The bot will not start.')
         exit()
     dp.include_router(init_router)
     await dp.start_polling(bot)
