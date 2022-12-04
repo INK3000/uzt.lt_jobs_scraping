@@ -7,7 +7,7 @@ import json
 from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram import Router
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import types
@@ -35,6 +35,31 @@ class FSMUpdateSubs(StatesGroup):
     remove = State()
 
 
+def get_welcome_text(data):
+    if data['is_new_user']:
+        welcome_text = 'You are welcome {}!'
+    else:
+        welcome_text = 'Welcome back, {}!'
+    return welcome_text
+
+
+def get_data_from_base(user_tg_id):
+    data = dict()
+    data['is_new_user'] = False
+    with Session() as session:
+        data['categories'] = session.query(Category).all()
+        data['user'] = session.query(User).filter(
+            User.user_tg_id == user_tg_id).one_or_none()
+        if not data['user']:
+            data['user'] = User(user_tg_id=user_tg_id, subscribes='{}')
+            session.add(data['user'])
+            session.commit()
+            data['is_new_user'] = True
+    data['subscribes'] = Subscribes(
+        json.loads(data['user'].subscribes), data['categories'])
+    return data
+
+
 def if_subscribes_text(subscribes: Subscribes) -> str:
     if subscribes:
         text = f'You are subscribed to categories: {subscribes}'
@@ -48,8 +73,8 @@ def update_subscribes(text: str, data: dict, oper: str) -> dict:
     user = data['user']
     response = subscribes.update(text=text, oper=oper)
     if response:
+        user.subscribes = json.dumps(subscribes.added)
         with Session() as session:
-            user.subscribes = json.dumps(subscribes.added)
             session.add(user)
             session.commit()
     return data
@@ -57,48 +82,28 @@ def update_subscribes(text: str, data: dict, oper: str) -> dict:
 
 @dp.message(Command(commands=['start']))
 async def cmd_start(message: types.Message, state: FSMContext):
-    user_tg_id = message.chat.id
-    user_name = message.chat.username
-    with Session() as session:
-        categories = session.query(Category).all()
-        user = session.query(User).filter(
-            User.user_tg_id == user_tg_id).one_or_none()
+    data = get_data_from_base(message.chat.id)
 
-        if not user:
-            user = User(user_tg_id=user_tg_id, subscribes='{}')
-            session.add(user)
-            session.commit()
-            message.answer(f'You are welcome, {user_name}!')
-        else:
-            await message.answer(f'Welcome back, {user_name}!')
+    await state.set_state(FSMUpdateSubs.started)
+    await state.set_data(data)
 
-        subscribes = Subscribes(json.loads(user.subscribes), categories)
-
-        await state.set_state(FSMUpdateSubs.started)
-        await state.set_data({
-            'user': user,
-            'categories': categories,
-            'subscribes': subscribes,
-        })
-        await message.answer(
-            text='/start - if something wrong - try start again \n'
-            '/add - add categories to my subscribes\n'
-            '/remove - remove categories from my subscribes\n'
-            '/show - show my subscribes'
-        )
+    await message.answer(text=get_welcome_text(data).format(message.chat.username))
+    await message.answer(
+        text='/start - if something wrong - try start again \n'
+        '/add - add categories to my subscribes\n'
+        '/remove - remove categories from my subscribes\n'
+        '/show - show my subscribes'
+    )
 
 
 @dp.message(Command(commands=['show']))
-@dp.message(Text(text='Show my subscribes'))
 async def cmd_show(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     subscribes = data['subscribes']
-    print(bool(subscribes), type(subscribes))
     await message.answer(if_subscribes_text(subscribes))
 
 
 @dp.message(Command(commands=['add']))
-@dp.message(Text(text='Add to my subscribes'))
 async def cmd_choose_to_add_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     categories = data['categories']
@@ -110,7 +115,6 @@ async def cmd_choose_to_add_categories(message: types.Message, state: FSMContext
 
 
 @dp.message(Command(commands=['remove']))
-@dp.message(Text(text='Remove from my subscribes'))
 async def cmd_choose_to_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     text = f'You are subscribed to categories: {data["subscribes"]}'
