@@ -65,13 +65,15 @@ async def cmd_start(message: types.Message, state: FSMContext):
             User.user_tg_id == user_tg_id).one_or_none()
 
         if not user:
-            session.add(User(user_tg_id=user_tg_id))
+            user = User(user_tg_id=user_tg_id, subscribes='{}')
+            session.add(user)
             session.commit()
-            await message.answer(f'You are welcome, {user_name}!')
+            message.answer(f'You are welcome, {user_name}!')
         else:
             await message.answer(f'You are already started, {user_name}')
 
         subscribes = Subscribes(json.loads(user.subscribes), categories)
+        print(subscribes)
 
         await state.set_state(FSMUpdateSubs.started)
         await state.set_data({
