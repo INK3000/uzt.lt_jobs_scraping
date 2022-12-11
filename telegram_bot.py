@@ -63,6 +63,14 @@ def subscribes_to_text(data: dict) -> str:
     return "\n".join(categories_list)
 
 
+def report_text(subscribes: dict) -> str:
+    if subscribes:
+        text = f"You are subscribed to categories:\n{subscribes_to_text(subscribes)}"
+    else:
+        text = "You are not subscribed to any category."
+    return text
+
+
 def update_subscribes(text: str, data: dict, oper: str) -> dict:
     subscribes: Subscribes = data["subscribes"]
     user = data["user"]
@@ -95,13 +103,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
 async def cmd_show(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     subscribes: Subscribes = data["subscribes"]
-    if subscribes:
-        text = (
-            f"You are subscribed to categories:\n{subscribes_to_text(subscribes.added)}"
-        )
-    else:
-        text = "You are not subscribed to any category."
-    await message.answer(text)
+    await message.answer(report_text(subscribes.added))
 
 
 @dp.message(Command(commands=["add"]))
@@ -110,10 +112,12 @@ async def cmd_choose_to_add_categories(
 ) -> None:
     data = await state.get_data()
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(subscribes_to_text(subscribes.not_added))
-    await message.answer(
-        "Specify the categories you are interested in, separated by commas:"
-    )
+    if subscribes.not_added:
+        await message.answer(
+            f"Specify the categories you are interested in, separated by comma:\n{subscribes_to_text(subscribes.not_added)}"
+        )
+    else:
+        await message.answer("There are no available categories.")
     await state.set_state(FSMUpdateSubs.add)
 
 
@@ -123,11 +127,12 @@ async def cmd_choose_to_remove_categories(
 ) -> None:
     data = await state.get_data()
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(subscribes_to_text(subscribes.added))
-    await message.answer(
-        "Specify the categories you want to remove "
-        "from your subscription, separated by commas:"
-    )
+    if subscribes.added:
+        await message.answer(
+            f"Specify the categories you want to remove, separated by comma:\n{subscribes_to_text(subscribes.added)}"
+        )
+    else:
+        await message.answer("Yoy are not subscribed to any category.")
     await state.set_state(FSMUpdateSubs.remove)
 
 
@@ -136,7 +141,7 @@ async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper="/add")
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(subscribes_to_text(subscribes.added))
+    await message.answer(report_text(subscribes.added))
     await state.set_state(FSMUpdateSubs.started)
 
 
@@ -145,7 +150,7 @@ async def cmd_remove_categories(message: types.Message, state: FSMContext) -> No
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper="/remove")
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(subscribes_to_text(subscribes.added))
+    await message.answer(report_text(subscribes.added))
     await state.set_state(FSMUpdateSubs.started)
 
 
