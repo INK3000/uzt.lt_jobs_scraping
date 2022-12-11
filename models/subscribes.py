@@ -26,14 +26,18 @@ class Subscribes:
 
     @property
     def json_data(self):
-        data = {key: value[1] for key, value in sorted(self.added.items())}
+        data = {
+            key: value[1]
+            for key, value in sorted(self.added.items(), key=lambda i: int(i[0]))
+        }
         return json.dumps(data)
 
     def __repr__(self):
-        # TODO сделать чтобы правильно отображались номера категорий и их имена
-        # 1. Компьютеры/ИТ  --- category.id category.name \n
         categories_list = list(
-            [f"{key}. {value[0]}" for key, value in sorted(self.added.items())]
+            [
+                f"{key}. {value[0]}"
+                for key, value in sorted(self.added.items(), key=lambda i: int(i[0]))
+            ]
         )
         return "\n".join(categories_list)
 

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import sys
 
@@ -41,23 +40,27 @@ def get_data_from_base(user_tg_id):
     with Session() as session:
         data["categories"] = session.query(Category).all()
         data["user"] = (
-            session.query(User).filter(User.user_tg_id == user_tg_id).one_or_none()
+            session.query(User).filter(
+                User.user_tg_id == user_tg_id).one_or_none()
         )
         if not data["user"]:
             data["user"] = User(user_tg_id=user_tg_id, subscribes="{}")
             session.add(data["user"])
             session.commit()
             data["is_new_user"] = True
-    data["subscribes"] = Subscribes(data["user"].subscribes, data["categories"])
+    data["subscribes"] = Subscribes(
+        data["user"].subscribes, data["categories"])
     return data
 
 
-def subscribes_to_text(subscribes: Subscribes) -> str:
-    if subscribes:
-        text = f"You are subscribed to categories:\n{subscribes}"
-    else:
-        text = "You are not subscribed to any category."
-    return text
+def subscribes_to_text(data: dict) -> str:
+    categories_list = list(
+        [
+            f"{key}. {value[0]}"
+            for key, value in sorted(data.items(), key=lambda i: int(i[0]))
+        ]
+    )
+    return "\n".join(categories_list)
 
 
 def update_subscribes(text: str, data: dict, oper: str) -> dict:
@@ -91,8 +94,14 @@ async def cmd_start(message: types.Message, state: FSMContext):
 @dp.message(Command(commands=["show"]))
 async def cmd_show(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
-    subscribes = data["subscribes"]
-    await message.answer(subscribes_to_text(subscribes))
+    subscribes: Subscribes = data["subscribes"]
+    if subscribes:
+        text = (
+            f"You are subscribed to categories:\n{subscribes_to_text(subscribes.added)}"
+        )
+    else:
+        text = "You are not subscribed to any category."
+    await message.answer(text)
 
 
 @dp.message(Command(commands=["add"]))
@@ -100,9 +109,8 @@ async def cmd_choose_to_add_categories(
     message: types.Message, state: FSMContext
 ) -> None:
     data = await state.get_data()
-    categories = data["categories"]
-    text = "\n".join([f"{category.id}: {category.name}" for category in categories])
-    await message.answer(text)
+    subscribes: Subscribes = data["subscribes"]
+    await message.answer(subscribes_to_text(subscribes.not_added))
     await message.answer(
         "Specify the categories you are interested in, separated by commas:"
     )
@@ -114,7 +122,8 @@ async def cmd_choose_to_remove_categories(
     message: types.Message, state: FSMContext
 ) -> None:
     data = await state.get_data()
-    await message.answer(subscribes_to_text(data["subscribes"]))
+    subscribes: Subscribes = data["subscribes"]
+    await message.answer(subscribes_to_text(subscribes.added))
     await message.answer(
         "Specify the categories you want to remove "
         "from your subscription, separated by commas:"
@@ -126,7 +135,8 @@ async def cmd_choose_to_remove_categories(
 async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper="/add")
-    await message.answer(subscribes_to_text(data["subscribes"]))
+    subscribes: Subscribes = data["subscribes"]
+    await message.answer(subscribes_to_text(subscribes.added))
     await state.set_state(FSMUpdateSubs.started)
 
 
@@ -134,7 +144,8 @@ async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
 async def cmd_remove_categories(message: types.Message, state: FSMContext) -> None:
     data = await state.get_data()
     data = update_subscribes(text=message.text, data=data, oper="/remove")
-    await message.answer(subscribes_to_text(data["subscribes"]))
+    subscribes: Subscribes = data["subscribes"]
+    await message.answer(subscribes_to_text(subscribes.added))
     await state.set_state(FSMUpdateSubs.started)
 
 
