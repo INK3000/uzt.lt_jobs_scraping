@@ -1,43 +1,55 @@
+import json
+
 from models.category import Category
 
 
-class Subscribes():
+class Subscribes:
 
-    '''
+    """
     class for users subscribes
     for init need subscribes@dp.message(Command(commands=['show']))
-    '''
-    # subscribes_d: {"6": 1234, "3": 2332}
+    """
+
+    # subscribes_d: '{"6": 1234, "3": 2332}'
     # categories: [Category, ...]
     # Category: id, name, event_target, last_id
 
-    def __init__(self, subscribes_d: dict, categories: list[Category]):
-        self.added = subscribes_d
-        self.not_added: dict = self.get_not_added(categories)
+    def __init__(self, subscribes: str, categories: list[Category]):
+        self.added = dict()
+        self.not_added = dict()
+        for category in categories:
+            value = (category.name, category.last_id)
+            if str(category.id) in json.loads(subscribes):
+                self.added[str(category.id)] = value
+            else:
+                self.not_added[str(category.id)] = value
+
+    @property
+    def json_data(self):
+        data = {key: value[1] for key, value in sorted(self.added.items())}
+        return json.dumps(data)
 
     def __repr__(self):
-        return ', '.join(sorted(list(self.added)))
+        # TODO сделать чтобы правильно отображались номера категорий и их имена
+        # 1. Компьютеры/ИТ  --- category.id category.name \n
+        categories_list = list(
+            [f"{key}. {value[0]}" for key, value in sorted(self.added.items())]
+        )
+        return "\n".join(categories_list)
 
     def __bool__(self):
         return bool(self.added)
-
-    def get_not_added(self, categories):
-        all_categories = {
-            str(category.id): category.last_id for category in categories}
-        result = {key: val for key, val in all_categories.items()
-                  if key not in self.added}
-        return result
 
     def update(self, text, oper):
         to_update_list = self.text_to_list(text)
         try:
             match oper:
-                case '/add':
+                case "/add":
                     self.add(to_update_list)
-                case '/remove':
+                case "/remove":
                     self.remove(to_update_list)
         except Exception as ex:
-            print(f'Exception {ex}')
+            print(f"Exception {ex}")
             return False
         return True
 
@@ -55,5 +67,5 @@ class Subscribes():
 
     @staticmethod
     def text_to_list(text):
-        result_list = [i.strip() for i in text.split(',')]
+        result_list = [i.strip() for i in text.split(",")]
         return result_list
