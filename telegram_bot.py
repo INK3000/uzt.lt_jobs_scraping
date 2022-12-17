@@ -16,13 +16,30 @@ from models.user import User
 
 bot = Bot(token=BOT_TOKEN)  # pyright: ignore
 dp = Dispatcher()
-init_router = Router()
 
 
 class FSMUpdateSubs(StatesGroup):
     started = State()
     add = State()
     remove = State()
+
+
+# get data from base by message.chat.id
+def get_data_from_base(chat_id):
+    data = dict()
+    data["is_new_user"] = False
+    with Session() as session:
+        data["categories"] = session.query(Category).all()
+        data["user"] = (
+            session.query(User).filter(User.user_tg_id == chat_id).one_or_none()
+        )
+        if not data["user"]:
+            data["user"] = User(user_tg_id=chat_id, subscribes="{}")
+            session.add(data["user"])
+            session.commit()
+            data["is_new_user"] = True
+    data["subscribes"] = Subscribes(data["user"].subscribes, data["categories"])
+    return data
 
 
 # welcome text for first message after start command
@@ -32,25 +49,6 @@ def get_welcome_text(data):
     else:
         welcome_text = "Welcome back, {}!"
     return welcome_text
-
-
-def get_data_from_base(user_tg_id):
-    data = dict()
-    data["is_new_user"] = False
-    with Session() as session:
-        data["categories"] = session.query(Category).all()
-        data["user"] = (
-            session.query(User).filter(
-                User.user_tg_id == user_tg_id).one_or_none()
-        )
-        if not data["user"]:
-            data["user"] = User(user_tg_id=user_tg_id, subscribes="{}")
-            session.add(data["user"])
-            session.commit()
-            data["is_new_user"] = True
-    data["subscribes"] = Subscribes(
-        data["user"].subscribes, data["categories"])
-    return data
 
 
 def subscribes_to_text(data: dict) -> str:
@@ -73,7 +71,7 @@ def report_text(subscribes: dict) -> str:
 
 def update_subscribes(text: str, data: dict, oper: str) -> dict:
     subscribes: Subscribes = data["subscribes"]
-    user = data["user"]
+    user: User = data["user"]
     response = subscribes.update(text=text, oper=oper)
     if response:
         user.subscribes = subscribes.json_data
@@ -159,7 +157,6 @@ async def main():
     if not is_exist_db(DATABASE_NAME):
         log_info("The database was not found. The bot will not start.")
         exit()
-    dp.include_router(init_router)
     await dp.start_polling(bot)
 
 
