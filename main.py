@@ -1,18 +1,19 @@
 #!.venv/bin/python
 import re
-import warnings
-from datetime import date
+import time
+from multiprocessing import Pool
 
 from bs4 import BeautifulSoup
-from sqlalchemy import exc as sa_exc
 from sqlalchemy import func
 
-from create_database import create_db
+from create_database import create_database
 from loggers.loggers import log_info
 from models.browser import Browser
 from models.category import Category
-from models.database import DATABASE_NAME, Session, is_exist_db
+from models.database import Session
 from models.job import Job
+
+START_URL = "https://portal.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx"
 
 
 def filter_only_jobs_rows(tag: BeautifulSoup) -> bool:
@@ -69,95 +70,113 @@ def get_all_jobs_in_category(browser, category):
         table = browser.soup.find(id="ctl00_MainArea_SearchResultsList_POGrid")
         rows = table.find_all(filter_only_jobs_rows, recursive=False)
         for row in rows:
-            date_from, date_to, job_name, company_name, company_place = row.find_all(
-                "td"
-            )
-            full_job_url = browser.do_post_back(
-                get_event_target(job_name.a.get("href"))
-            )
-            # full_job_url содержит адрес страницы, itemID, а так же другие не важные параметры,
-            # которые могут изменяться от сессии к сессии, но не влияют на конечный адрес страницы.
-            # Однако они не позволяют обойти проверку на уникальность поля url при добавлении в базу.
-            # Убираем лишние параметры из url, оставляем только адрес страницы и параметр itemID
-            # результат сохраняем в short_job_url (постоянный и уникальный для каждой вакансии)
-            r = re.compile(r"^(https:.+\?).+(itemID.+)$")
-            s = r.search(full_job_url).groups()
-            short_job_url = "".join(s)
-            jobs_list.append(
-                Job(
-                    date_upd=date.today().isoformat(),
-                    category=category.id,
-                    company=company_name.text.strip(),
-                    date_from=date_from.text,
-                    date_to=date_to.text,
-                    name=job_name.text.strip(),
-                    url=short_job_url,
-                    place=company_place.text.strip(),
+            try:
+                (
+                    date_from,
+                    date_to,
+                    job_name,
+                    company_name,
+                    company_place,
+                ) = row.find_all("td")
+                full_job_url = browser.do_post_back(
+                    get_event_target(job_name.a.get("href"))
                 )
-            )
+                # full_job_url содержит адрес страницы, itemID, а так же другие не важные параметры,
+                # которые могут изменяться от сессии к сессии, но не влияют на конечный адрес страницы.
+                # Однако они не позволяют обойти проверку на уникальность поля url при добавлении в базу.
+                # Убираем лишние параметры из url, оставляем только адрес страницы и параметр itemID
+                # результат сохраняем в short_job_url (постоянный и уникальный для каждой вакансии)
+                r = re.compile(r"^(https:.+\?).+(itemID.+)$")
+                s = r.search(full_job_url).groups()
+                short_job_url = "".join(s)
+                jobs_list.append(
+                    Job(
+                        date_upd=time.time(),
+                        category=category.id,
+                        company=company_name.text.strip(),
+                        date_from=date_from.text,
+                        date_to=date_to.text,
+                        name=job_name.text.strip(),
+                        url=short_job_url,
+                        place=company_place.text.strip(),
+                    )
+                )
+            except AttributeError as e:
+                log_info(
+                    f"Возникла ошибка при работе с категорией {category.name} (id={category.id}).\n"
+                    f"Описание ошибки:\n{e}\n"
+                    f"Продолжаем работу."
+                )
+                continue
         event_target = get_next_page_event_target(browser)
     return jobs_list
 
 
+def process_get_jobs_in_category(category: Category) -> None:
+
+    browser = Browser(follow_redirects=True, verify=False, timeout=None)
+    session = Session()
+
+    # инициализируем браузер стартовой страницей
+    browser.go_url(url=START_URL)
+
+    try:
+        log_info(
+            f"Начинаем собирать вакансии в категории {category.name} (id={category.id})..."
+        )
+        # создаем список из объектов Job для определенной категории,
+        # затем реверсируем, чтобы верхние записи на странице имели более свежий индекс в базе
+        # сохраняем в базу список
+        jobs_list_from_site = set(get_all_jobs_in_category(browser, category))
+        jobs_list_from_base = set(
+            session.query(Job).filter(Job.category == category.id).all()
+        )
+        new_jobs_list = list(jobs_list_from_site.difference(jobs_list_from_base))
+        new_jobs_list = sorted(new_jobs_list, key=lambda i: i.date_upd, reverse=True)
+
+        session.add_all(new_jobs_list)
+        session.commit()
+
+        # получаем id верхней вакансии и сохраняем его в поле last_id для текущей категории
+        category.last_id = (
+            session.query(func.max(Job.id)).filter(Job.category == category.id).one()[0]
+        )
+        session.add(category)
+        session.commit()
+
+        log_info(
+            f"В категории {category.name} (id={category.id}) собрано и сохранено {len(new_jobs_list)} вакансий."
+        )
+
+    except Exception as e:
+        log_info(
+            f"Возникла ошибка при работе с категорией {category.name} (id={category.id}).\n"
+            f"Описание ошибки:\n{e}\n"
+            f"Продолжаем работу."
+        )
+    finally:
+        session.close()
+        log_info(f"Сессия закрыта (id={category.id})")
+        browser.close()
+        log_info(f"Браузер закрыт (id={category.id})")
+
+
 def main():
-    if not is_exist_db(DATABASE_NAME):
-        create_db()
+    create_database()
+    with Session() as session:
+        # создаем список из объектов Category
+        categories = session.query(Category).all()
+        while not categories:
+            with Browser(follow_redirects=True, verify=False, timeout=None) as browser:
+                # инициализируем браузер стартовой страницей
+                browser.go_url(url=START_URL)
+                categories = get_categories_list(browser)
+                session.add_all(categories)
+                session.commit()
 
-    start_url = "https://portal.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx"
-    with Browser(follow_redirects=True, verify=False, timeout=None) as browser:
-
-        browser.go_url(url=start_url)
-        if browser.response.is_success:
-            log_info("Успешно перешли на стартовую страницу")
-        else:
-            log_info(
-                "Не удалось открыть стартовую страницу \n Работа программы завершена"
-            )
-            exit()
-
-        with Session() as session:
-            # отключаем предупреждения от sqlalchemy, возникающие при появлении дублирующихся записей
-            # хотя записи в таблицу не попадают, но предупреждения появляются и портят вывод в консоль
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-
-                categories = session.query(Category).all()
-                while not categories:
-                    categories = get_categories_list(browser)
-                    session.add_all(categories)
-                    session.commit()
-
-                for category in categories:
-                    try:
-                        # log_info(f'Начинаем собирать вакансии в категории {category.name} (id={category.id})...')
-
-                        jobs_list = get_all_jobs_in_category(browser, category)
-                        jobs_list.reverse()
-                        session.add_all(jobs_list)
-                        session.commit()
-
-                        category.last_id = (
-                            session.query(func.max(Job.id))
-                            .filter(Job.category == category.id)
-                            .order_by(Job.id.desc())
-                            .one()[0]
-                        )
-                        session.add(category)
-                        session.commit()
-
-                        # log_info(f'В категории {category.name} собрано и сохранено {len(jobs_list)} вакансий.')
-                        browser.go_url(url=start_url)
-
-                    except Exception as e:
-                        log_info(
-                            f"Возникла ошибка при работе с категорией {category.name}.\n"
-                            f"Описание ошибки:\n{e}"
-                            f"Продолжаем работу."
-                        )
-
-            log_info(
-                f"Работа успешно завершена, все данные сохранены в файл {DATABASE_NAME}"
-            )
+    with Pool(10) as p:
+        p.map(process_get_jobs_in_category, categories)
+    log_info("Работа успешно завершена, все данные сохранены")
 
 
 if __name__ == "__main__":
