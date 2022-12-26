@@ -18,3 +18,8 @@ aiogram = "3.0b6"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+extraPaths = ['loggers/', 'models/', 'bot_core/*']
