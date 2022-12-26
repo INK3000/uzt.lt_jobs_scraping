@@ -174,7 +174,7 @@ def main():
                 session.add_all(categories)
                 session.commit()
 
-    with Pool(10) as p:
+    with Pool(1) as p:
         p.map(process_get_jobs_in_category, categories)
     log_info("Работа успешно завершена, все данные сохранены")
 

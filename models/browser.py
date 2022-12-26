@@ -94,7 +94,7 @@ class Browser(httpx.Client):
             self.payload["__EVENTVALIDATION"] = (
                 re.compile(r"__EVENTVALIDATION\|([^|]+)").search(response.text).group(1)
             )
-            self.soup = self.get_soup(response)
+            self.soup = self.get_soup(response.text)
 
         return redirect_url
 
