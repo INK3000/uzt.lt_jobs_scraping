@@ -1,5 +1,3 @@
-import os
-
 from models.category import Category
 from models.database import create_db
 from models.job import Job

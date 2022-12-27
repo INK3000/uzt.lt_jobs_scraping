@@ -2,14 +2,16 @@ import asyncio
 import logging
 import sys
 
-from aiogram import Bot, Dispatcher, Router, types
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, InlineKeyboardButton, callback_query
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from loggers.loggers import log_info
+from create_database import create_database
 from models.category import Category
-from models.database import DATABASE_NAME, Session, is_exist_db
+from models.database import Session
 from models.subscribes import Subscribes
 from models.telegram import BOT_TOKEN
 from models.user import User
@@ -22,6 +24,15 @@ class FSMUpdateSubs(StatesGroup):
     started = State()
     add = State()
     remove = State()
+
+
+def get_inline_keyboard(data_list):
+    keyboard_builder = InlineKeyboardBuilder()
+    for key, (name, _) in data_list.items():
+        keyboard_builder.button(text=f"{name}", callback_data=f"inln_subs_key_{key}")
+    keyboard_builder.button(text="Complete", callback_data="inln_subs_key_done")
+    keyboard_builder.adjust(1, repeat=True)
+    return keyboard_builder.as_markup()
 
 
 # get data from base by message.chat.id
@@ -112,7 +123,12 @@ async def cmd_choose_to_add_categories(
     subscribes: Subscribes = data["subscribes"]
     if subscribes.not_added:
         await message.answer(
-            f"Specify the categories you are interested in, separated by comma:\n{subscribes_to_text(subscribes.not_added)}"
+            "Select the categories you are interested in\
+            \nby clicking on the category buttons.\
+            \nOnce you've selected the categories you want,\
+            \nclick the 'Complete' button\
+            \nto save your changes.",
+            reply_markup=get_inline_keyboard(subscribes.not_added),
         )
     else:
         await message.answer("There are no available categories.")
@@ -127,36 +143,70 @@ async def cmd_choose_to_remove_categories(
     subscribes: Subscribes = data["subscribes"]
     if subscribes.added:
         await message.answer(
-            f"Specify the categories you want to remove, separated by comma:\n{subscribes_to_text(subscribes.added)}"
+            "Select the categories you want to remove\
+                    \nfrom your subscriptions by clicking on the category name buttons.\
+                    \nWhen you're done selecting, click the 'Complete' button\
+                    \nto save your changes",
+            reply_markup=get_inline_keyboard(subscribes.added),
         )
     else:
-        await message.answer("Yoy are not subscribed to any category.")
+        await message.answer("There are no available categories.")
     await state.set_state(FSMUpdateSubs.remove)
 
 
-@dp.message(FSMUpdateSubs.add)
-async def cmd_add_categories(message: types.Message, state: FSMContext) -> None:
+@dp.callback_query(F.data == "inln_subs_key_done")
+async def to_complete(query: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    data = update_subscribes(text=message.text, data=data, oper="/add")
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(report_text(subscribes.added))
+    await query.answer()
+    await query.message.delete()
+    await query.message.answer(report_text(subscribes.added))
     await state.set_state(FSMUpdateSubs.started)
 
 
-@dp.message(FSMUpdateSubs.remove)
-async def cmd_remove_categories(message: types.Message, state: FSMContext) -> None:
+@dp.callback_query(FSMUpdateSubs.add)
+async def cmd_add_categories(query: types.CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
-    data = update_subscribes(text=message.text, data=data, oper="/remove")
+    text = query.data.split("_")[-1]
+    data = update_subscribes(text=text, data=data, oper="/add")
+    await query.answer()
+    await query.message.delete()
     subscribes: Subscribes = data["subscribes"]
-    await message.answer(report_text(subscribes.added))
-    await state.set_state(FSMUpdateSubs.started)
+    if subscribes.not_added:
+        await query.message.answer(
+            "Select the categories you are interested in\
+            \nby clicking on the category buttons.\
+            \nOnce you've selected the categories you want,\
+            \nclick the 'Complete' button\
+            \nto save your changes.",
+            reply_markup=get_inline_keyboard(subscribes.not_added),
+        )
+    else:
+        await query.message.answer("There are no available categories.")
+
+
+@dp.callback_query(FSMUpdateSubs.remove)
+async def cmd_remove_categories(query: types.CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    text = query.data.split("_")[-1]
+    data = update_subscribes(text=text, data=data, oper="/remove")
+    await query.answer()
+    await query.message.delete()
+    subscribes: Subscribes = data["subscribes"]
+    if subscribes.added:
+        await query.message.answer(
+            "Select the categories you want to remove\
+                    \nfrom your subscriptions by clicking on the category name buttons.\
+                    \nWhen you're done selecting, click the 'Complete' button\
+                    \nto save your changes",
+            reply_markup=get_inline_keyboard(subscribes.added),
+        )
+    else:
+        await query.message.answer("There are no available categories.")
 
 
 async def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    if not is_exist_db(DATABASE_NAME):
-        log_info("The database was not found. The bot will not start.")
-        exit()
     await dp.start_polling(bot)
 
 

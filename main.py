@@ -145,7 +145,7 @@ def process_get_jobs_in_category(category: Category) -> None:
         session.commit()
 
         log_info(
-            f"В категории {category.name} (id={category.id}) собрано и сохранено {len(new_jobs_list)} вакансий."
+            f"В категории {category.name} (id={category.id}) сохранено {len(new_jobs_list)} новых вакансий."
         )
 
     except Exception as e:
@@ -156,9 +156,9 @@ def process_get_jobs_in_category(category: Category) -> None:
         )
     finally:
         session.close()
-        log_info(f"Сессия закрыта (id={category.id})")
+        # log_info(f"Сессия закрыта (id={category.id})")
         browser.close()
-        log_info(f"Браузер закрыт (id={category.id})")
+        # log_info(f"Браузер закрыт (id={category.id})")
 
 
 def main():
@@ -174,7 +174,7 @@ def main():
                 session.add_all(categories)
                 session.commit()
 
-    with Pool(1) as p:
+    with Pool(10) as p:
         p.map(process_get_jobs_in_category, categories)
     log_info("Работа успешно завершена, все данные сохранены")
 
