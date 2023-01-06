@@ -1,6 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
-
 from models.database import Base
+from sqlalchemy import Column, Integer, String, UniqueConstraint
 
 
 class User(Base):

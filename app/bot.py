@@ -18,9 +18,10 @@ from bot_core.handlers.update_subscr import (
     complete_update_subscribes,
 )
 from create_database import create_database
-from settings import BOT_TOKEN
 
-bot = Bot(token=BOT_TOKEN)  # pyright: ignore
+import settings
+
+bot = Bot(token=settings.BOT_TOKEN)  # pyright: ignore
 dp = Dispatcher()
 
 
