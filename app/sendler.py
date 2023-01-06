@@ -5,6 +5,7 @@ from typing import Sized
 import sqlalchemy.orm.query
 from sqlalchemy.sql import and_
 
+from create_database import create_database
 from loggers.loggers import log_info
 from models import telegram
 from models.category import Category
@@ -21,6 +22,8 @@ def do_filter(query: sqlalchemy.orm.query.Query, subscribes: dict) -> dict:
     data = {"is_new_data": False}
     if subscribes:
         for key, value in subscribes.items():
+            if not value:
+                value = 0
             temp_query = query.filter(
                 and_(Job.category == key, Job.id > value)
             ).order_by(Job.id)
@@ -49,7 +52,7 @@ def main():
 
     with Session() as session:
         users = session.query(User).all()
-        categories = session.query(Category).all()
+        categories = session.query(Category).order_by(Category.id).all()
         if not users:
             log_info("Нет пользователей с активной подпиской.")
             return
@@ -87,4 +90,5 @@ def main():
 
 
 if __name__ == "__main__":
+    create_database()
     main()
