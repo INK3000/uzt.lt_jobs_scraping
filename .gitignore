@@ -3,3 +3,4 @@
 .git
 app/.env
 __pycache__
+uzt_job_db.sqlite
