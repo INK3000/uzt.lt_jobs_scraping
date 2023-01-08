@@ -3,4 +3,5 @@
 .git
 app/.env
 __pycache__
+*.to_del
 uzt_job_db.sqlite

@@ -8,6 +8,8 @@ class User(Base):
 
     id: Column = Column(Integer, primary_key=True, autoincrement=True)
     user_tg_id = Column(Integer)
+    full_name = Column(String)
+    username = Column(String)
     subscribes = Column(String)
 
     def __repr__(self):

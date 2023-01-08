@@ -2,14 +2,13 @@ from aiogram import types
 from aiogram.fsm.context import FSMContext
 
 from bot_core.handlers.states import FSMUpdateSubs
-from bot_core.handlers.utils import (get_data_from_base, get_welcome_text,
-                                     report_text)
+from bot_core.handlers.utils import get_data_from_base, get_welcome_text, report_text
 from bot_core.keyboards.add_remove_subscr import get_add_remove_inline_keyboard
 from models.subscribes import Subscribes
 
 
 async def cmd_start(message: types.Message, state: FSMContext):
-    data = get_data_from_base(message.chat.id)
+    data = get_data_from_base(message)
 
     await state.set_state(FSMUpdateSubs.started)
     await state.set_data(data)
