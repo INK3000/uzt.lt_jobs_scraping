@@ -12,11 +12,13 @@ from bot_core.handlers.commands import (
     cmd_start,
 )
 from bot_core.handlers.states import FSMUpdateSubs
+from bot_core.handlers.default import default
 from bot_core.handlers.update_subscr import (
     cmd_add_categories,
     cmd_remove_categories,
     complete_update_subscribes,
 )
+from bot_core.middlewares.database import LoadUser
 from create_database import create_database
 
 import settings
@@ -28,6 +30,7 @@ dp = Dispatcher()
 async def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
+    dp.update.middleware.register(LoadUser())
     dp.message.register(cmd_start, Command(commands=["start"]))
     dp.message.register(cmd_show_subscribe, Command(commands=["show"]))
     dp.message.register(cmd_set_state_to_add_categories, Command(commands=["add"]))
@@ -40,13 +43,10 @@ async def main():
     )
     dp.callback_query.register(cmd_remove_categories, FSMUpdateSubs.remove)
     dp.callback_query.register(cmd_add_categories, FSMUpdateSubs.add)
-
+    # dp.message.register(default)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     create_database()
     asyncio.run(main())
-
-# TODO При перезапуске бота, данные теряются, так как хранятся в памяти.
-# Необходимо каждый раз отправлять команду /start

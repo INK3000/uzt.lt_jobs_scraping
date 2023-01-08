@@ -1,4 +1,4 @@
 [tool.pyright]
 reportOptionalMemberAccess = false
 reportOptionalSubscript = false
-extraPaths = ['loggers/', 'models/', 'bot_core/']
+extraPaths = ['loggers/', 'models/', 'bot_core/*']

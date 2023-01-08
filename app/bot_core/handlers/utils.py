@@ -1,4 +1,3 @@
-from models.category import Category
 from models.database import Session
 from models.subscribes import Subscribes
 from models.user import User
