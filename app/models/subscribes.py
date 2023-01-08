@@ -52,35 +52,27 @@ class Subscribes:
     def __bool__(self):
         return bool(self._added)
 
-    def update(self, text, oper):
-        to_update_list = self.text_to_list(text)
+    def update(self, category_id, oper):
         try:
             match oper:
                 case "/add":
-                    self.add(to_update_list)
+                    self.add(category_id)
                 case "/remove":
-                    self.remove(to_update_list)
+                    self.remove(category_id)
         except Exception as ex:
             print(f"Exception {ex}")
             return False
         return True
 
-    def remove(self, to_add_list):
-        for key in to_add_list:
-            value = self._added.pop(key, False)
-            if value:
-                self._not_added.update({key: value})
+    def remove(self, category_id):
+        value = self._added.pop(category_id, False)
+        if value:
+            self._not_added.update({category_id: value})
 
-    def add(self, to_add_list):
-        for key in to_add_list:
-            value = self._not_added.pop(key, False)
-            if value:
-                self._added.update({key: value})
-
-    @staticmethod
-    def text_to_list(text):
-        result_list = [i.strip() for i in text.split(",")]
-        return result_list
+    def add(self, category_id):
+        value = self._not_added.pop(category_id, False)
+        if value:
+            self._added.update({category_id: value})
 
     @staticmethod
     def get_categories_from_base():
@@ -91,9 +83,9 @@ class Subscribes:
     def init_subscribes(self):
         categories = self.get_categories_from_base()
         for category in categories:
-            key = str(category.id)
+            key = category.id
             value = (category.name, category.last_id)
-            if key in json.loads(self.user.subscribes):
+            if str(key) in json.loads(self.user.subscribes):
                 self._added[key] = value
             else:
                 self._not_added[key] = value

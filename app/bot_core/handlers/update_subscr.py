@@ -9,10 +9,10 @@ from models.subscribes import Subscribes
 from models.user import User
 
 
-def update_subscribes(text: str, data: dict, oper: str) -> dict:
+def update_subscribes(category_id: int, data: dict, oper: str) -> dict:
     subscribes: Subscribes = data["subscribes"]
     user: User = data["user"]
-    response = subscribes.update(text=text, oper=oper)
+    response = subscribes.update(category_id=category_id, oper=oper)
     if response:
         user.subscribes = subscribes.json_data
         with Session() as session:
@@ -32,8 +32,8 @@ async def complete_update_subscribes(query: CallbackQuery, state: FSMContext):
 
 async def cmd_remove_categories(query: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
-    text = query.data.split("_")[-1]
-    data = update_subscribes(text=text, data=data, oper="/remove")
+    category_id = int(query.data.split("_")[-1])
+    data = update_subscribes(category_id=category_id, data=data, oper="/remove")
     await query.answer()
     await query.message.delete()
     subscribes: Subscribes = data["subscribes"]
@@ -51,8 +51,8 @@ async def cmd_remove_categories(query: CallbackQuery, state: FSMContext) -> None
 
 async def cmd_add_categories(query: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
-    text = query.data.split("_")[-1]
-    data = update_subscribes(text=text, data=data, oper="/add")
+    category_id = int(query.data.split("_")[-1])
+    data = update_subscribes(category_id=category_id, data=data, oper="/add")
     await query.answer()
     await query.message.delete()
     subscribes: Subscribes = data["subscribes"]
