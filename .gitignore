@@ -1,5 +1,8 @@
-.venv
+.venv/
 .idea
 .git
+app/.env
 __pycache__
-uzt_job_db2.sqlite
+*.to_del
+uzt_job_db.sqlite
+

@@ -1,0 +1,18 @@
+version: "3"
+services:
+  bot:
+    build: .
+    restart: always
+    depends_on:
+      - db
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: uzt_lt
+      POSTGRES_PASSWORD: uzt_LT_01
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres:/var/lib/postgresql/data
+volumes:
+  postgres:
