@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+
 from aiogram import BaseMiddleware
 from models.database import Session
-from models.user import User
 from models.subscribes import Subscribes
-from dataclasses import dataclass
+from models.user import User
 
 
 @dataclass
@@ -24,14 +25,18 @@ class LoadUser(BaseMiddleware):
         return await handler(event, data)
 
     @staticmethod
-    def get_data_from_base_or_create(user):
+    def get_data_from_base_or_create(user_data):
         with Session() as session:
-            user = session.query(User).filter(User.user_tg_id == user.id).one_or_none()
+            user = (
+                session.query(User)
+                .filter(User.user_tg_id == user_data.id)
+                .one_or_none()
+            )
             if not user:
                 user = User(
-                    user_tg_id=user.id,
-                    full_name=user.first_name,
-                    username=user.username,
+                    user_tg_id=user_data.id,
+                    full_name=user_data.first_name,
+                    username=user_data.username,
                     subscribes="{}",
                 )
                 session.add(user)
