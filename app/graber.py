@@ -4,14 +4,13 @@ import time
 from multiprocessing import Pool
 
 from bs4 import BeautifulSoup
-from sqlalchemy import func
-
 from create_database import create_database
 from loggers.loggers import log_info
 from models.browser import Browser
 from models.category import Category
 from models.database import Session
 from models.job import Job
+from sqlalchemy import func
 
 START_URL = "https://portal.uzt.lt/LDBPortal/Pages/ServicesForEmployees.aspx"
 
@@ -107,7 +106,7 @@ def get_all_jobs_in_category(browser, category):
                     f"Описание ошибки:\n{e}\n"
                     f"Продолжаем работу."
                 )
-                continue
+                break
         event_target = get_next_page_event_target(browser)
     return jobs_list
 
@@ -131,15 +130,18 @@ def process_get_jobs_in_category(category: Category) -> None:
         jobs_list_from_base = set(
             session.query(Job).filter(Job.category == category.id).all()
         )
-        new_jobs_list = list(jobs_list_from_site.difference(jobs_list_from_base))
-        new_jobs_list = sorted(new_jobs_list, key=lambda i: i.date_upd, reverse=True)
+        new_jobs_list = list(
+            jobs_list_from_site.difference(jobs_list_from_base))
+        new_jobs_list = sorted(
+            new_jobs_list, key=lambda i: i.date_upd, reverse=True)
 
         session.add_all(new_jobs_list)
         session.commit()
 
         # получаем id верхней вакансии и сохраняем его в поле last_id для текущей категории
         category.last_id = (
-            session.query(func.max(Job.id)).filter(Job.category == category.id).one()[0]
+            session.query(func.max(Job.id)).filter(
+                Job.category == category.id).one()[0]
         )
         session.add(category)
         session.commit()
