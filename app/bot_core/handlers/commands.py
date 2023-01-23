@@ -1,17 +1,12 @@
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-
 from bot_core.handlers.states import FSMUpdateSubs
-from bot_core.handlers.utils import get_data_from_base, report_text
+from bot_core.handlers.utils import report_text
 from bot_core.keyboards.add_remove_subscr import get_add_remove_inline_keyboard
 from bot_core.middlewares.database import UserData
 
 
-async def cmd_start(message: types.Message, state: FSMContext):
-    data = get_data_from_base(message)
-
-    await state.set_state(FSMUpdateSubs.started)
-    await state.set_data(data)
+async def cmd_start(message: types.Message):
     await message.answer(
         text="/start - if something wrong - try start again \n"
         "/add - add categories to my subscribes\n"

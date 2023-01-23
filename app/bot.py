@@ -2,26 +2,19 @@ import asyncio
 import logging
 import sys
 
+import settings
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-
-from bot_core.handlers.commands import (
-    cmd_set_state_to_add_categories,
-    cmd_set_state_to_remove_categories,
-    cmd_show_subscribe,
-    cmd_start,
-)
-from bot_core.handlers.states import FSMUpdateSubs
+from bot_core.handlers.commands import (cmd_set_state_to_add_categories,
+                                        cmd_set_state_to_remove_categories,
+                                        cmd_show_subscribe, cmd_start)
 from bot_core.handlers.default import default
-from bot_core.handlers.update_subscr import (
-    cmd_add_categories,
-    cmd_remove_categories,
-    complete_update_subscribes,
-)
+from bot_core.handlers.states import FSMUpdateSubs
+from bot_core.handlers.update_subscr import (cmd_add_categories,
+                                             cmd_remove_categories,
+                                             complete_update_subscribes)
 from bot_core.middlewares.database import LoadUser
 from create_database import create_database
-
-import settings
 
 bot = Bot(token=settings.BOT_TOKEN)  # pyright: ignore
 dp = Dispatcher()
@@ -43,7 +36,6 @@ async def main():
     )
     dp.callback_query.register(cmd_remove_categories, FSMUpdateSubs.remove)
     dp.callback_query.register(cmd_add_categories, FSMUpdateSubs.add)
-    # dp.message.register(default)
     await dp.start_polling(bot)
 
 
