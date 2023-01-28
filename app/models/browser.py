@@ -1,20 +1,26 @@
 import re
 import urllib
+from random import choice
 
 import httpx
 from bs4 import BeautifulSoup
+from loggers.loggers import log_info
 
 
 class Browser(httpx.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._headers = self.load_headers(filename="headers")
+        self.headers = self.load_headers(filename="headers")
         self.payload = None
         self.soup = None
         self.action_url = None
         self.response = None
         self.cookies = None
         self.data = dict()
+        self.proxies = {
+            "http://": "http://117.54.114.101",
+            "https://": "https://117.54.114.101",
+        }
 
     def get_soup(self, response=None) -> BeautifulSoup:
         return BeautifulSoup(response or self.response.text, "lxml")
@@ -41,10 +47,10 @@ class Browser(httpx.Client):
                 self.action_url = self.soup.find(id="aspnetForm").get("action")
             except AttributeError:
                 if tries == 0:
-                    print(
-                        f"Не удается открыть страницу {url} \n Работа программы завершена."
+                    log_info(
+                        f"Не удается открыть страницу {url}\n\n Response: {self.response}"
                     )
-                    exit()
+                    return
                 else:
                     tries -= 1
             else:
