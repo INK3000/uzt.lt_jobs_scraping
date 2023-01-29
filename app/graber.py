@@ -115,7 +115,8 @@ def get_all_jobs_in_category(browser, category):
 
 def process_get_jobs_in_category(category: Category) -> None:
 
-    browser = Browser(follow_redirects=True, verify=False, timeout=None)
+    # browser = Browser(follow_redirects=True, verify=False, timeout=None)
+    browser = Browser(verify=False, timeout=None)
     session = Session()
 
     # инициализируем браузер стартовой страницей
@@ -168,16 +169,18 @@ def main():
         # создаем список из объектов Category
         categories = session.query(Category).all()
         while not categories:
-            with Browser(follow_redirects=True, verify=False, timeout=None) as browser:
+            with Browser(follow_redirects=True, verify=False, timeout=None, proxies='http://77.245.156.166') as browser:
                 # инициализируем браузер стартовой страницей
                 browser.go_url(url=START_URL)
                 categories = get_categories_list(browser)
                 session.add_all(categories)
                 session.commit()
-
-    with Pool(10) as p:
-        p.map(process_get_jobs_in_category, categories)
-    log_info("Работа успешно завершена, все данные сохранены")
+    try:
+        with Pool(10) as p:
+            p.map(process_get_jobs_in_category, categories)
+        log_info("Работа успешно завершена, все данные сохранены")
+    except Exception as e:
+        log_info(f'Во время процесса отловлена ошибка: {e}')
 
 
 if __name__ == "__main__":

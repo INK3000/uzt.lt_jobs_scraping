@@ -5,6 +5,8 @@ services:
     restart: always
     depends_on:
       - db
+    volumes:
+      - ./app:/app
   db:
     image: postgres
     restart: always

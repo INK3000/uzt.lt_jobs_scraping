@@ -7,6 +7,11 @@ from bs4 import BeautifulSoup
 from loggers.loggers import log_info
 
 
+class NotOkStatusCodeError(Exception):
+    def __init__(self, message) -> None:
+        super().__init__(message)
+
+
 class Browser(httpx.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,6 +40,12 @@ class Browser(httpx.Client):
         tries = 5
         while True:
             self.response = self.get(url=url)
+            print(self.response.text)
+
+            if self.response.status_code != 200:
+                log_info(self.response)
+                raise NotOkStatusCodeError(self.response.status_code)
+
             if not self.cookies:
                 self.cookies = self.response.cookies
             if not self.headers.get("Cookie"):
@@ -45,33 +56,32 @@ class Browser(httpx.Client):
             self.base_url = re.compile(r"^.+/").search(url).group(0)
             try:
                 self.action_url = self.soup.find(id="aspnetForm").get("action")
-            except AttributeError:
+            except AttributeError or NotOkStatusCodeError:
                 if tries == 0:
                     log_info(
-                        f"Не удается открыть страницу {url}\n\n Response: {self.response}"
+                        f"Не удается открыть страницу {url}\n\n Response: {self.response}\n\n"
                     )
                     return
                 else:
                     tries -= 1
             else:
-                break
-        self.payload = {
-            "ctl00$MasterScriptManager": "ctl00$MainArea$UpdatePanel1|",
-            "ctl00$calendarLayoutHelperText": "",
-            "ctl00$MainArea$QuickSearchByLocalityControl$Keyword": "",
-            "ctl00$MainArea$QuickSearchByLocalityControl$poPlaces": "-1",
-            "ctl00$MainArea$QuickSearchByLocalityControl$LocalityRegisteredOnly": "on",
-            "ctl00$MainArea$QuickSearchByLocalityControl$PeriodPicker": "6",
-            "__ASYNCPOST": "true",
-            "__LASTFOCUS": "",
-            "__EVENTTARGET": "",
-            "__EVENTARGUMENT": "",
-            "__VIEWSTATE": self.soup.find(id="__VIEWSTATE").get("value"),
-            "__VIEWSTATEGENERATOR": self.soup.find(id="__VIEWSTATEGENERATOR").get(
-                "value"
-            ),
-            "__EVENTVALIDATION": self.soup.find(id="__EVENTVALIDATION").get("value"),
-        }
+                self.payload = {
+                    "ctl00$MasterScriptManager": "ctl00$MainArea$UpdatePanel1|",
+                    "ctl00$calendarLayoutHelperText": "",
+                    "ctl00$MainArea$QuickSearchByLocalityControl$Keyword": "",
+                    "ctl00$MainArea$QuickSearchByLocalityControl$poPlaces": "-1",
+                    "ctl00$MainArea$QuickSearchByLocalityControl$LocalityRegisteredOnly": "on",
+                    "ctl00$MainArea$QuickSearchByLocalityControl$PeriodPicker": "6",
+                    "__ASYNCPOST": "true",
+                    "__LASTFOCUS": "",
+                    "__EVENTTARGET": "",
+                    "__EVENTARGUMENT": "",
+                    "__VIEWSTATE": self.soup.find(id="__VIEWSTATE").get("value"),
+                    "__VIEWSTATEGENERATOR": self.soup.find(id="__VIEWSTATEGENERATOR").get(
+                        "value"
+                    ),
+                    "__EVENTVALIDATION": self.soup.find(id="__EVENTVALIDATION").get("value"),
+                }
 
     def do_post_back(self, event_target: str, follow: bool = False) -> str:
         """

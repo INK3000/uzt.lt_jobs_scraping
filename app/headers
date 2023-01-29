@@ -1,15 +1,14 @@
-Host: www.uzt.lt
-User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0
-Accept: */*
+Host: portal.uzt.lt
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
 Accept-Language: en-US,en;q=0.5
-X-Requested-With: XMLHttpRequest
-X-MicrosoftAjax: Delta=true
-Cache-Control: no-cache
-Content-Type: application/x-www-form-urlencoded; charset=utf-8
-Origin: https://www.uzt.lt
-Alt-Used: www.uzt.lt
+Accept-Encoding: gzip, deflate, br
+Alt-Used: portal.uzt.lt
 Connection: keep-alive
-Sec-Fetch-Dest: empty
-Sec-Fetch-Mode: cors
-Sec-Fetch-Site: same-origin
+Cookie: expirationExternal=q04rp0w3sdrfhtt3be2toovf; expirationExternal_UserWasLoggedIn=0; cookiesession1=678A3E22FF496515D13126709FCBEDEC; __utma=230931102.915425669.1671299044.1674856819.1674910633.6; __utmz=230931102.1674910633.6.6.utmcsr=uzt.lt|utmccn=(referral)|utmcmd=referral|utmcct=/; __utma=237140036.827256427.1671827904.1673957906.1674732924.7; __utmz=237140036.1671827904.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); _ga=GA1.2.827256427.1671827904; _gid=GA1.2.583677394.1674856813; SITEXSRF141=vkggm8q8343e35mydx77w7rs58bfq1bc; privacy_2=0; privacy_3=0; privacy_4=0; privacy_verify=1; ASP.NET_SessionId=q04rp0w3sdrfhtt3be2toovf; __utmb=230931102.3.10.1674910633; __utmc=230931102; __utmt=1; cf_use_ob=0
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Sec-Fetch-User: ?1
 TE: trailers
